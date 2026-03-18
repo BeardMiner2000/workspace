@@ -19,7 +19,7 @@ Services:
 
 By default, `data_ingest` now does three things continuously:
 
-1. bootstraps the configured season on startup
+1. bootstraps the configured season on first startup only (and skips bootstrap on restart if the season already exists)
 2. generates seeded synthetic market marks for `BTCUSDT`, `ETHUSDT`, `SOLUSDT`, and `DOGEUSDT`
 3. runs the three bot heuristics and submits paper orders through the trade engine
 

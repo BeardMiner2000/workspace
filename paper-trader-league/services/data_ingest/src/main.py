@@ -84,8 +84,21 @@ class LeagueRuntime:
                 self.log(f'waiting for dependencies: {exc}')
                 time.sleep(3)
 
+    def season_exists(self) -> bool:
+        with self.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT EXISTS(SELECT 1 FROM seasons WHERE season_id = %s) AS season_exists',
+                    (self.season_id,),
+                )
+                row = cur.fetchone()
+                return bool(row['season_exists'])
+
     def maybe_bootstrap(self) -> None:
         if not self.bootstrap:
+            return
+        if self.season_exists():
+            self.log(f'season {self.season_id} already exists; skipping bootstrap to preserve prior state')
             return
         payload = {'season_id': self.season_id, 'starting_btc': self.starting_btc}
         response = requests.post(f'{self.trade_engine_url}/season/bootstrap', json=payload, timeout=10)

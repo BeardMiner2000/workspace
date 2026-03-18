@@ -38,6 +38,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
@@ -81,3 +82,4 @@ services:
 
 volumes:
   timescaledb_data:
+  grafana_data:
