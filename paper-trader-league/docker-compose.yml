@@ -1,5 +1,15 @@
 version: "3.9"
 
+x-python-service: &python-service
+  image: python:3.12-slim
+  restart: unless-stopped
+  working_dir: /app
+  env_file:
+    - .env
+  depends_on:
+    timescaledb:
+      condition: service_healthy
+
 services:
   timescaledb:
     image: timescale/timescaledb:latest-pg16
@@ -12,6 +22,11 @@ services:
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./infra/timescaledb/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   grafana:
     image: grafana/grafana:latest
@@ -28,47 +43,43 @@ services:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
-      - timescaledb
+      timescaledb:
+        condition: service_healthy
 
   data_ingest:
-    image: python:3.12-slim
+    <<: *python-service
     container_name: ptl-data-ingest
-    working_dir: /app
-    command: sh -c "pip install -r requirements.txt && python src/main.py"
-    env_file:
-      - .env
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && python src/main.py"
     volumes:
       - ./services/data_ingest:/app
-    depends_on:
-      - timescaledb
 
   trade_engine:
-    image: python:3.12-slim
+    <<: *python-service
     container_name: ptl-trade-engine
-    working_dir: /app
-    command: sh -c "pip install -r requirements.txt && python src/main.py"
-    env_file:
-      - .env
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && uvicorn src.main:app --host 0.0.0.0 --port 8088"
     volumes:
       - ./services/trade_engine:/app
     ports:
       - "8088:8088"
-    depends_on:
-      - timescaledb
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   scoring_api:
-    image: python:3.12-slim
+    <<: *python-service
     container_name: ptl-scoring-api
-    working_dir: /app
-    command: sh -c "pip install -r requirements.txt && python src/main.py"
-    env_file:
-      - .env
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && uvicorn src.main:app --host 0.0.0.0 --port 8090"
     volumes:
       - ./services/scoring_api:/app
     ports:
       - "8090:8090"
-    depends_on:
-      - timescaledb
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   timescaledb_data:

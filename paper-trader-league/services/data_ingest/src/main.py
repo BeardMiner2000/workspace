@@ -1,14 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timezone
+import os
 import time
 
 
 def main() -> None:
-    print("[data_ingest] starting stub service")
-    print("[data_ingest] TODO: connect CCXT/news/sentiment feeds and persist normalized market events")
+    source = os.getenv('MARKET_DATA_SOURCE', 'stub')
+    print(f'[data_ingest] starting placeholder service (source={source})')
+    print('[data_ingest] current role: keep the Docker stack alive and reserve the process boundary for future feed adapters')
     while True:
-        print(f"[data_ingest] heartbeat {datetime.utcnow().isoformat()}Z")
+        print(f"[data_ingest] heartbeat {datetime.now(timezone.utc).isoformat()}")
         time.sleep(30)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

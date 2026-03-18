@@ -1,19 +1,70 @@
 {
   "title": "Paper Trader League - Leaderboard Overview",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "10s",
+  "time": {"from": "now-24h", "to": "now"},
+  "templating": {
+    "list": [
+      {
+        "name": "season_id",
+        "type": "query",
+        "label": "Season",
+        "datasource": "TimescaleDB",
+        "refresh": 1,
+        "query": "SELECT season_id AS __text, season_id AS __value FROM seasons ORDER BY created_at DESC;",
+        "current": {"selected": true, "text": "season-001", "value": "season-001"}
+      }
+    ]
+  },
   "panels": [
     {
       "type": "table",
       "title": "Latest Leaderboard",
+      "datasource": "TimescaleDB",
       "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, unrealized_pnl_btc, drawdown_pct, trade_count, fee_btc, ts FROM bot_metrics ORDER BY bot_id, ts DESC;"
+          "rawSql": "WITH latest AS ( SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, drawdown_pct, trade_count, fee_btc, cash_btc, ts FROM bot_metrics WHERE season_id = '${season_id}' ORDER BY bot_id, ts DESC ) SELECT bot_id, equity_btc, realized_pnl_btc, drawdown_pct, trade_count, fee_btc, cash_btc, ts FROM latest ORDER BY equity_btc DESC, realized_pnl_btc DESC;"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Equity (BTC)",
+      "datasource": "TimescaleDB",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT ts AS time, equity_btc AS value, bot_id AS metric FROM bot_metrics WHERE season_id = '${season_id}' ORDER BY ts ASC;"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Recent Metrics",
+      "datasource": "TimescaleDB",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT ts, bot_id, equity_btc, realized_pnl_btc, drawdown_pct, trade_count, fee_btc FROM bot_metrics WHERE season_id = '${season_id}' ORDER BY ts DESC, bot_id ASC LIMIT 30;"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Recent Orders",
+      "datasource": "TimescaleDB",
+      "gridPos": {"x": 0, "y": 16, "w": 24, "h": 8},
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT ts, bot_id, symbol, side, request_price, executed_price, requested_quantity, executed_quantity, status FROM bot_orders WHERE season_id = '${season_id}' ORDER BY ts DESC, id DESC LIMIT 25;"
         }
       ]
     }
-  ],
-  "schemaVersion": 39,
-  "version": 1,
-  "refresh": "10s"
+  ]
 }

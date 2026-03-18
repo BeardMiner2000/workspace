@@ -2,63 +2,72 @@
 
 Live, multi-bot paper trading tournament with sentiment-aware strategies, unified execution simulator, and Grafana leaderboard.
 
-## Goals
+## What works now
 
-- Run at least three distinct trading agents (“bots”) with different data inputs and risk appetites
-- Paper trade continuously for 3-day “seasons,” starting each bot with 0.05 BTC
-- Track performance (BTC-denominated) after fees/slippage; store full trade history
-- Surface real-time standings and analytics via Grafana
-- Archive all data for post-season reports
+- Local Docker stack for TimescaleDB, Grafana, trade engine, scoring API, and a placeholder data-ingest worker
+- SQL-backed season bootstrap/reset for three bots:
+  - `aurora_quanta`
+  - `stormchaser_delta`
+  - `mercury_micro`
+- Trade engine endpoints for:
+  - season bootstrap
+  - order submission
+  - mark-to-market equity refresh
+- Immediate paper fills with configurable fee/slippage defaults
+- Scoring API endpoints for leaderboard, latest metrics, and latest orders
+- Grafana dashboard with leaderboard, equity history, recent metrics, and recent orders
 
 ## Architecture (high-level)
 
-```
-Exchanges/API feeds → Data Ingest → Trade Engine / Simulator ← Bot Sandbox (Docker)
+```text
+Exchanges/API feeds → Data Ingest → Trade Engine / Simulator ← Bot Sandbox (future)
                                                 ↓
                                          TimescaleDB → Grafana Leaderboard
 ```
 
-- **Data Ingest** – Streams price/order book data (CCXT Pro), plus macro/news/sentiment feeds.
-- **Trade Engine** – Normalizes orders, simulates fills, applies fees, records ledger events.
-- **Bots** – Each bot container subscribes to state updates and submits orders via a simple SDK/API.
-- **Scoring API** – Exposes metrics/leaderboard endpoints for Grafana and reports.
-- **Storage** – TimescaleDB (Postgres) for trades/balances/metrics + raw logs for narrative reporting.
-
 ## Repo layout
 
-```
+```text
 bots/
-  aurora_quanta/
-  stormchaser_delta/
-  mercury_micro/
 config/
-  bots/
-  season.example.yaml
+infra/
 services/
   data_ingest/
   trade_engine/
   scoring_api/
-infra/
-  grafana/
-  timescaledb/
 BOT_LEAGUE_SPEC.md
 BOT_PERSONAS.md
 BOT_STRATEGY_SPECS.md
 docker-compose.yml
 .env.example
+RUNBOOK.md
 ```
 
-## Current planning docs
+## Current service contracts
 
-- `BOT_LEAGUE_SPEC.md` — season rules, fee/slippage model, shared constraints
-- `BOT_PERSONAS.md` — names, personalities, aggression style, narrative identity
-- `BOT_STRATEGY_SPECS.md` — implementation-oriented behavior and risk profiles
-- `config/` — starter season and bot config skeletons
+### Trade engine
 
-## Next steps
+- `GET /health`
+- `POST /season/bootstrap`
+- `POST /marks`
+- `POST /orders`
 
-1. Flesh out service contracts (order submission, market data schema).
-2. Implement Timescale schema + migrations.
-3. Build bot SDK and plug in first strategy prototypes.
-4. Configure Grafana dashboards + alerting.
-5. Document runbook + GitHub actions for deployment.
+### Scoring API
+
+- `GET /health`
+- `GET /leaderboard`
+- `GET /metrics/latest`
+- `GET /orders/latest`
+
+## Practical limitations
+
+This pass is intentionally simple:
+
+- fills are immediate, not queue-based
+- mark-to-market depends on submitted prices/marks
+- valuation currently assumes `BTC` as the season accounting asset and works best with `BTCUSDT` plus any relevant `*USDT` or `*BTC` marks
+- there is no bot SDK yet; the service boundary is now in place for one
+
+## Next logical step
+
+Build a tiny bot client/SDK that can poll market state, submit orders, and write rationale/metadata back into the trade engine.
