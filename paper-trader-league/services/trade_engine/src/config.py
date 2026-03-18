@@ -3,8 +3,8 @@ import os
 
 DEFAULT_BOTS = [
     ('aurora_quanta', 'Aurora Quanta'),
-    ('stormchaser_delta', 'Stormchaser Delta'),
-    ('mercury_micro', 'Mercury Micro'),
+    ('stormchaser_delta', 'StormChaser Delta'),
+    ('mercury_vanta', 'Mercury Vanta'),
 ]
 DEFAULT_SEASON_ID = os.getenv('DEFAULT_SEASON_ID', 'season-001')
 DEFAULT_STARTING_BTC = Decimal(os.getenv('DEFAULT_STARTING_BTC', '0.05'))

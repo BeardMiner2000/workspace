@@ -1,4 +1,4 @@
-# Mercury Micro
+# Mercury Vanta
 
 ## Personality
 Quiet, precise, fee-aware. Focuses on small repeated edges.
