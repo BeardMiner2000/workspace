@@ -108,6 +108,19 @@ python3 scripts/runtime_healthcheck.py --season-id season-001
 
 The script exits non-zero on failure, so it can also be used in cron or other automation.
 
+### Automatic recovery / watchdog
+
+A helper script `scripts/watch_runtime.sh` continuously runs the health check and automatically 
+invokes `docker compose up -d` if the stack ever looks unhealthy. Example:
+
+```bash
+nohup ./scripts/watch_runtime.sh --stale-after-seconds 300 >> logs/runtime-watchdog.log 2>&1 &
+```
+
+- interval defaults to 60s; override with `INTERVAL_SECONDS=120 ./scripts/watch_runtime.sh`
+- current PID is stored in `.watchdog.pid` when launched via the `nohup` example above
+- logs stream to `logs/runtime-watchdog.log`
+
 ## 8) Useful env knobs
 
 ```env
