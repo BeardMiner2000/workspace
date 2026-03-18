@@ -1,0 +1,14 @@
+bot:
+  id: stormchaser_delta
+  style: event_momentum
+  aggression: very_high
+  max_gross_exposure_pct: 50
+  base_position_risk_pct: 5
+  preferred_holding_window_minutes: [5, 480]
+  min_liquidity_usd: 1500000
+  signals:
+    - breaking_news_keywords
+    - social_sentiment_spikes
+    - abnormal_volume
+    - momentum_burst
+    - liquidation_pressure

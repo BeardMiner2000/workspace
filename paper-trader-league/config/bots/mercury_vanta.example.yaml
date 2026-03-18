@@ -1,0 +1,14 @@
+bot:
+  id: mercury_vanta
+  style: microstructure
+  aggression: high
+  max_gross_exposure_pct: 45
+  base_position_risk_pct: 3
+  preferred_holding_window_minutes: [1, 240]
+  min_liquidity_usd: 10000000
+  signals:
+    - orderbook_imbalance
+    - spread_dynamics
+    - short_term_mean_reversion
+    - tape_pressure
+    - friction_adjusted_expectancy

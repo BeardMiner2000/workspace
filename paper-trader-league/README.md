@@ -31,6 +31,9 @@ bots/
   aurora_quanta/
   stormchaser_delta/
   mercury_micro/
+config/
+  bots/
+  season.example.yaml
 services/
   data_ingest/
   trade_engine/
@@ -38,9 +41,19 @@ services/
 infra/
   grafana/
   timescaledb/
+BOT_LEAGUE_SPEC.md
+BOT_PERSONAS.md
+BOT_STRATEGY_SPECS.md
 docker-compose.yml
 .env.example
 ```
+
+## Current planning docs
+
+- `BOT_LEAGUE_SPEC.md` — season rules, fee/slippage model, shared constraints
+- `BOT_PERSONAS.md` — names, personalities, aggression style, narrative identity
+- `BOT_STRATEGY_SPECS.md` — implementation-oriented behavior and risk profiles
+- `config/` — starter season and bot config skeletons
 
 ## Next steps
 

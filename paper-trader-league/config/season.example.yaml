@@ -1,0 +1,20 @@
+season:
+  name: inaugural-72h
+  duration_hours: 72
+  initial_btc_per_bot: 0.05
+  scoring_currency: BTC
+  fee_model:
+    maker_bps: 4
+    taker_bps: 6
+  slippage_model:
+    high_liquidity_bps: 2
+    mid_liquidity_bps: 8
+    low_liquidity_bps: 20
+  trading_universe:
+    mode: broad-spot
+    min_quote_volume_usd: 1000000
+    allow_assets_not_directly_paired_to_btc: true
+  reporting:
+    save_raw_market_snapshots: true
+    save_bot_rationales: true
+    metrics_interval_seconds: 30

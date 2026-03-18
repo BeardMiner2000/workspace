@@ -22,4 +22,5 @@
 - Current services are scaffolds only.
 - TimescaleDB schema is initialized on first startup.
 - Grafana auto-loads the placeholder leaderboard dashboard.
+- Review `BOT_PERSONAS.md`, `BOT_STRATEGY_SPECS.md`, and `config/` before implementing strategy logic.
 - Next implementation step is wiring DB access and the bot/trade-engine contract.

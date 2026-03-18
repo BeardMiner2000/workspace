@@ -1,0 +1,14 @@
+bot:
+  id: aurora_quanta
+  style: macro_rotation
+  aggression: high
+  max_gross_exposure_pct: 75
+  base_position_risk_pct: 12
+  preferred_holding_window_hours: [4, 48]
+  min_liquidity_usd: 5000000
+  signals:
+    - btc_dominance
+    - relative_strength_btc_pairs
+    - macro_regime
+    - narrative_sentiment
+    - sector_rotation
