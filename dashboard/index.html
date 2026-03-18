@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JL Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── CSS VARIABLES ──────────────────────────────────────────── */
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #1c2330;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #8b949e;
+      --text-dim:    #6e7681;
+
+      --green:       #3fb950;
+      --green-dim:   #1a3a22;
+      --green-glow:  rgba(63,185,80,.15);
+
+      --orange:      #f0883e;
+      --orange-dim:  #3a2010;
+      --orange-glow: rgba(240,136,62,.15);
+
+      --yellow:      #e3b341;
+      --yellow-dim:  #3a2d0a;
+      --yellow-glow: rgba(227,179,65,.15);
+
+      --blue:        #79c0ff;
+      --blue-dim:    #0d2040;
+      --blue-glow:   rgba(121,192,255,.12);
+
+      --radius:      14px;
+      --radius-sm:   8px;
+      --font:        'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ── RESET & BASE ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 48px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── LAYOUT ─────────────────────────────────────────────────── */
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────── */
+    .site-header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .site-header .inner {
+      max-width: 680px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .site-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #e6edf3 30%, #79c0ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .last-updated {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* ── COUNTDOWN BANNER ───────────────────────────────────────── */
+    .countdown-banner {
+      background: var(--green-dim);
+      border-bottom: 1px solid var(--green);
+      padding: 10px 16px;
+    }
+
+    .countdown-banner .inner {
+      max-width: 680px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .countdown-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .countdown-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: -1px;
+    }
+
+    .countdown-sub {
+      font-size: 0.72rem;
+      color: var(--green);
+      opacity: 0.7;
+    }
+
+    /* ── MAIN CONTENT ───────────────────────────────────────────── */
+    .main {
+      padding-top: 24px;
+    }
+
+    /* ── SECTION LABEL ──────────────────────────────────────────── */
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      margin-top: 32px;
+      padding-left: 2px;
+    }
+
+    .section-label:first-child { margin-top: 0; }
+
+    /* ── CARD ───────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 18px 16px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .card.green::before  { background: var(--green); }
+    .card.orange::before { background: var(--orange); }
+    .card.yellow::before { background: var(--yellow); }
+    .card.blue::before   { background: var(--blue); }
+
+    .card.green  { box-shadow: 0 0 0 1px transparent, inset 0 0 24px var(--green-glow); }
+    .card.orange { box-shadow: 0 0 0 1px transparent, inset 0 0 24px var(--orange-glow); }
+    .card.yellow { box-shadow: 0 0 0 1px transparent, inset 0 0 24px var(--yellow-glow); }
+    .card.blue   { box-shadow: 0 0 0 1px transparent, inset 0 0 24px var(--blue-glow); }
+
+    /* ── CARD HEADER ────────────────────────────────────────────── */
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .card-title-group {}
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .card-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    /* ── BADGE ──────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge.green  { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green); }
+    .badge.orange { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
+    .badge.yellow { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+    .badge.blue   { background: var(--blue-dim);   color: var(--blue);   border: 1px solid var(--blue); }
+
+    .badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── PRIORITY TAG ───────────────────────────────────────────── */
+    .priority-tag {
+      font-size: 0.63rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .priority-tag.critical { background: rgba(240,136,62,.2); color: var(--orange); }
+    .priority-tag.high     { background: rgba(63,185,80,.15); color: var(--green); }
+    .priority-tag.huge     { background: rgba(227,179,65,.15); color: var(--yellow); }
+    .priority-tag.low      { background: rgba(121,192,255,.12); color: var(--blue); }
+
+    /* ── DIVIDER ────────────────────────────────────────────────── */
+    .card-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 12px 0;
+    }
+
+    /* ── FOCUS TEXT ─────────────────────────────────────────────── */
+    .focus-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .focus-text strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ── MILESTONE LIST ─────────────────────────────────────────── */
+    .milestones {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .milestone {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .milestone .check {
+      width: 18px; height: 18px;
+      border-radius: 5px;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .milestone.done .check {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .milestone.done .check::after {
+      content: '';
+      width: 10px; height: 6px;
+      border-left: 2px solid #0d1117;
+      border-bottom: 2px solid #0d1117;
+      transform: rotate(-45deg) translateY(-1px);
+      display: block;
+    }
+
+    .milestone .check-label {
+      color: var(--text-muted);
+    }
+
+    .milestone.done .check-label {
+      color: var(--text-dim);
+      text-decoration: line-through;
+      text-decoration-color: var(--text-dim);
+    }
+
+    .milestone .note {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ── LAUNCH DATE ────────────────────────────────────────────── */
+    .launch-date {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-dim);
+      border: 1px solid rgba(63,185,80,.3);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      margin-top: 12px;
+    }
+
+    .launch-date .ld-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .launch-date .ld-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    /* ── SUB-CARDS ──────────────────────────────────────────────── */
+    .sub-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sub-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 13px 14px;
+    }
+
+    .sub-card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .sub-card-title .icon {
+      font-size: 0.9rem;
+    }
+
+    .sub-card-body {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .sub-card-body .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-top: 5px;
+    }
+
+    .sub-card-body .step::before {
+      content: '→';
+      color: var(--yellow);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── THIS WEEK LIST ─────────────────────────────────────────── */
+    .week-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .week-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .week-item .num {
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--blue);
+      background: var(--blue-dim);
+      border-radius: 4px;
+      padding: 2px 6px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .week-item strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ── NEXT ACTION ────────────────────────────────────────────── */
+    .next-action {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--blue-dim);
+      border: 1px solid rgba(121,192,255,.2);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-top: 10px;
+    }
+
+    .next-action .na-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--blue);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .next-action .na-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* ── FOOTER ─────────────────────────────────────────────────── */
+    .site-footer {
+      text-align: center;
+      padding-top: 40px;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+    }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 400px) {
+      .card { padding: 14px 14px 12px; }
+      .card-title { font-size: 0.98rem; }
+      .site-title { font-size: 1.25rem; }
+    }
+
+    @media (min-width: 600px) {
+      .site-header { padding: 24px 24px 18px; }
+      .card { padding: 22px 22px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── HEADER ─────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="inner">
+      <h1 class="site-title">⚡ JL Command Center</h1>
+      <span class="last-updated">Updated Mar 18, 2026</span>
+    </div>
+  </header>
+
+  <!-- ── TUQUE LAUNCH COUNTDOWN BANNER ──────────────────────────── -->
+  <div class="countdown-banner">
+    <div class="inner">
+      <div>
+        <div class="countdown-label">🚀 Tuque Launch Countdown</div>
+        <div class="countdown-sub">Mon Mar 24, 2026 · Go live</div>
+      </div>
+      <div style="text-align:right">
+        <div class="countdown-value" id="countdown-days">—</div>
+        <div class="countdown-sub" id="countdown-label-days">days to go</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAIN ───────────────────────────────────────────────────── -->
+  <main class="main">
+    <div class="container">
+
+      <!-- ── TUQUE TRADING ─────────────────────────────────────── -->
+      <div class="section-label">Trading</div>
+      <div class="card green">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title">Tuque Trading</div>
+            <div class="card-sub">Cashflow · Bot trading on Coinbase</div>
+            <div class="priority-tag high">High Priority</div>
+          </div>
+          <div class="badge green">
+            <span class="dot"></span>
+            Paper → Live in 6 days
+          </div>
+        </div>
+
+        <ul class="milestones">
+          <li class="milestone done">
+            <span class="check"></span>
+            <span class="check-label">
+              Paper trading on real Coinbase data
+            </span>
+          </li>
+          <li class="milestone done">
+            <span class="check"></span>
+            <span class="check-label">
+              Real fee structure applied
+              <span class="note">Coinbase One: 1.875bps maker / 4.875bps taker</span>
+            </span>
+          </li>
+          <li class="milestone">
+            <span class="check"></span>
+            <span class="check-label">
+              Bot signal quality review
+              <span class="note">Days 2–3 of experiment</span>
+            </span>
+          </li>
+          <li class="milestone">
+            <span class="check"></span>
+            <span class="check-label">Risk limits &amp; position caps finalized</span>
+          </li>
+          <li class="milestone">
+            <span class="check"></span>
+            <span class="check-label">Live trading approved by JL</span>
+          </li>
+          <li class="milestone">
+            <span class="check"></span>
+            <span class="check-label">
+              🚀 Launch
+              <span class="note">Mon Mar 24, 2026</span>
+            </span>
+          </li>
+        </ul>
+
+        <div class="launch-date">
+          <div>
+            <div class="ld-label">Target Launch</div>
+            <div class="ld-value">Monday, March 24 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VELAURA AI ─────────────────────────────────────────── -->
+      <div class="section-label">AI Hosting</div>
+      <div class="card orange">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title">Velaura AI</div>
+            <div class="card-sub">AI infrastructure · Hosting deals</div>
+            <div class="priority-tag critical">Critical · 75–90% of time</div>
+          </div>
+          <div class="badge orange">
+            <span class="dot"></span>
+            Active
+          </div>
+        </div>
+
+        <p class="focus-text">
+          <strong>Now:</strong> Closing final hosting deals.
+          Secure <strong>4,000 machine</strong> hosting deals or sales.
+        </p>
+
+        <div class="card-divider"></div>
+
+        <p class="focus-text">
+          Complete all <strong>diligence packages</strong> for hosting agreements. 
+          This is the primary revenue and time focus — move fast.
+        </p>
+      </div>
+
+      <!-- ── CLUTCH MINING ──────────────────────────────────────── -->
+      <div class="section-label">Mining</div>
+      <div class="card yellow">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title">Clutch Mining</div>
+            <div class="card-sub">Bitcoin mining · 30-day window</div>
+            <div class="priority-tag huge">Huge Priority · 30-day clock</div>
+          </div>
+          <div class="badge yellow">
+            <span class="dot"></span>
+            Active
+          </div>
+        </div>
+
+        <div class="sub-cards">
+          <div class="sub-card">
+            <div class="sub-card-title">
+              <span class="icon">📍</span>
+              Lolita Site
+            </div>
+            <div class="sub-card-body">
+              <div class="step">Finalize purchase agreements — miners + containers</div>
+              <div class="step">Fundraise deposit → unlocks <strong>60-day extension</strong></div>
+            </div>
+          </div>
+
+          <div class="sub-card">
+            <div class="sub-card-title">
+              <span class="icon">🏙️</span>
+              Houston — Spectral / Mainspring
+            </div>
+            <div class="sub-card-body">
+              <div class="step">Site diligence ✓ complete</div>
+              <div class="step">Finalizing legal agreements</div>
+              <div class="step">Then: purchase agreements + fundraise (likely same investor pool as Lolita)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ZEBRA VENTURES ─────────────────────────────────────── -->
+      <div class="section-label">Ventures</div>
+      <div class="card blue">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title">Zebra Ventures</div>
+            <div class="card-sub">Fund formation · Long horizon</div>
+            <div class="priority-tag low">Low Priority · Long Term</div>
+          </div>
+          <div class="badge blue">
+            Long Term
+          </div>
+        </div>
+
+        <p class="focus-text">
+          <strong>Status:</strong> Fund formation required before meaningful progress.
+        </p>
+
+        <div class="next-action">
+          <span class="na-label">Next →</span>
+          <span class="na-text">Follow up on mechanic intro for garage takeover MVP assessment</span>
+        </div>
+      </div>
+
+      <!-- ── THIS WEEK ──────────────────────────────────────────── -->
+      <div class="section-label">This Week</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title">🗓️ Focus: Mar 18–24</div>
+          </div>
+        </div>
+
+        <!-- ✏️  UPDATE THIS LIST WEEKLY -->
+        <ul class="week-list">
+          <li class="week-item">
+            <span class="num">01</span>
+            <span><strong>Velaura:</strong> Drive final 4,000-machine hosting deals to close — push diligence packages to all active counterparties</span>
+          </li>
+          <li class="week-item">
+            <span class="num">02</span>
+            <span><strong>Tuque:</strong> Complete signal quality review (days 2–3), finalize risk limits, get JL sign-off for live launch Mon Mar 24</span>
+          </li>
+          <li class="week-item">
+            <span class="num">03</span>
+            <span><strong>Clutch – Lolita:</strong> Close purchase agreements + kick off fundraise for deposit to secure 60-day extension</span>
+          </li>
+          <li class="week-item">
+            <span class="num">04</span>
+            <span><strong>Clutch – Houston:</strong> Finalize legal agreements with Spectral/Mainspring</span>
+          </li>
+          <li class="week-item">
+            <span class="num">05</span>
+            <span><strong>Zebra:</strong> Send mechanic intro follow-up message re: garage takeover MVP</span>
+          </li>
+        </ul>
+      </div>
+
+    </div><!-- /container -->
+  </main>
+
+  <footer class="container site-footer">
+    JL Command Center · Static · Private
+  </footer>
+
+  <!-- ── COUNTDOWN SCRIPT ────────────────────────────────────────── -->
+  <script>
+    (function () {
+      var launchDate = new Date('2026-03-24T00:00:00-07:00'); // Pacific time
+      var now = new Date();
+      var diffMs = launchDate - now;
+      var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      var daysEl  = document.getElementById('countdown-days');
+      var labelEl = document.getElementById('countdown-label-days');
+
+      if (diffDays > 0) {
+        daysEl.textContent  = diffDays;
+        labelEl.textContent = diffDays === 1 ? 'day to go 🎯' : 'days to go 🎯';
+      } else if (diffDays === 0) {
+        daysEl.textContent  = 'TODAY';
+        labelEl.textContent = '🚀 Launch Day!';
+      } else {
+        daysEl.textContent  = '✓';
+        labelEl.textContent = 'Launched ' + Math.abs(diffDays) + 'd ago';
+      }
+
+      // Also update the status badge text dynamically
+      var badge = document.querySelector('.card.green .badge');
+      if (badge) {
+        var span = badge.querySelector('.dot');
+        if (diffDays > 0) {
+          badge.childNodes[badge.childNodes.length - 1].textContent = ' Paper → Live in ' + diffDays + (diffDays === 1 ? ' day' : ' days');
+        } else if (diffDays <= 0) {
+          badge.childNodes[badge.childNodes.length - 1].textContent = ' Live 🚀';
+        }
+      }
+    })();
+  </script>
+
+</body>
+</html>
