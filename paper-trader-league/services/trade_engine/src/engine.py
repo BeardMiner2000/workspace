@@ -4,7 +4,7 @@ from typing import Any
 
 from psycopg2.extras import Json
 
-from .config import DEFAULT_FEE_BPS, DEFAULT_SEASON_ID, DEFAULT_SLIPPAGE_BPS
+from .config import DEFAULT_FEE_BPS, DEFAULT_MAKER_FEE_BPS, DEFAULT_TAKER_FEE_BPS, DEFAULT_SEASON_ID, DEFAULT_SLIPPAGE_BPS
 from .db import get_conn
 
 FOUR = Decimal('0.00000001')
@@ -151,7 +151,10 @@ def recompute_metrics(cur, season_id: str, bot_id: str) -> dict[str, Any]:
 def submit_order(*, season_id: str = DEFAULT_SEASON_ID, bot_id: str, symbol: str, side: str,
                  order_type: str, quantity: Decimal, price: Decimal | None = None,
                  rationale: dict | None = None, metadata: dict | None = None,
-                 fee_bps: Decimal = DEFAULT_FEE_BPS, slippage_bps: Decimal = DEFAULT_SLIPPAGE_BPS) -> dict[str, Any]:
+                 fee_bps: Decimal | None = None, slippage_bps: Decimal = DEFAULT_SLIPPAGE_BPS) -> dict[str, Any]:
+    # Market orders are always taker; limit orders are maker
+    if fee_bps is None:
+        fee_bps = DEFAULT_MAKER_FEE_BPS if order_type.upper() == 'LIMIT' else DEFAULT_TAKER_FEE_BPS
     symbol = symbol.upper()
     side = side.upper()
     order_type = order_type.upper()
