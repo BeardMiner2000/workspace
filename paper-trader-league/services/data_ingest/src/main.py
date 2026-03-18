@@ -15,6 +15,18 @@ import psycopg2
 import requests
 from psycopg2.extras import RealDictCursor
 
+try:
+    from .market_feed import fetch_coinbase_prices_safe
+except ImportError:
+    import importlib.util, os as _os
+    _spec = importlib.util.spec_from_file_location(
+        "market_feed",
+        _os.path.join(_os.path.dirname(__file__), "market_feed.py")
+    )
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    fetch_coinbase_prices_safe = _mod.fetch_coinbase_prices_safe
+
 ZERO = Decimal('0')
 SAT = Decimal('0.00000001')
 
@@ -446,18 +458,50 @@ class LeagueRuntime:
             else:
                 self.mercury_logic(state)
 
+    def fetch_live_marks(self) -> dict[str, float] | None:
+        """Fetch real prices from Coinbase. Returns None on failure (caller should skip tick)."""
+        prices = fetch_coinbase_prices_safe(self.symbols, log_fn=self.log)
+        if prices is None:
+            return None
+        # Keep synthetic narrative/event scores for signal generation even with live prices.
+        # They are calculated from the price history, so we update history here.
+        for symbol, price in prices.items():
+            self.state[symbol]['price'] = price
+            self.history[symbol].append(Decimal(str(price)))
+        # Recompute narrative/event scores from tick counter
+        self.tick += 1
+        phase = self.tick
+        self.narrative_score = 0.65 * math.sin(phase / 8) + 0.35 * math.sin(phase / 21)
+        pulse = math.sin(phase / 5)
+        event_raw = 0.55 * pulse + self.rand.uniform(-0.2, 0.2)
+        if phase % 17 == 0:
+            event_raw += self.rand.choice([-1.4, -0.9, 0.9, 1.6])
+        self.event_score = max(-2.0, min(2.0, event_raw))
+        return prices
+
     def run(self) -> None:
         self.log(f'starting runtime source={self.source} season={self.season_id} loop={self.loop_seconds}s')
         self.wait_for_dependencies()
         self.maybe_bootstrap()
+        consecutive_failures = 0
         while True:
-            marks = self.update_synthetic_market()
+            if self.source == 'coinbase':
+                marks = self.fetch_live_marks()
+                if marks is None:
+                    consecutive_failures += 1
+                    self.log(f'live feed failure #{consecutive_failures}; skipping tick')
+                    time.sleep(min(self.loop_seconds * consecutive_failures, 30))
+                    continue
+                consecutive_failures = 0
+            else:
+                marks = self.update_synthetic_market()
             result = self.publish_marks(marks)
             self.run_bots()
             self.log(
                 'published marks '
                 + json.dumps(result['marks'])
                 + f' narrative={self.narrative_score:.3f} event={self.event_score:.3f}'
+                + (f' source=coinbase' if self.source == 'coinbase' else '')
             )
             time.sleep(self.loop_seconds)
 
