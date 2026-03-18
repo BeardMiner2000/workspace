@@ -82,7 +82,33 @@ curl -s http://localhost:8088/orders \
 - Open the provisioned `Paper Trader League - Leaderboard Overview` dashboard
 - Choose the season from the dashboard variable if more than one exists
 
-## 7) Useful env knobs
+## 7) Continuity / health check
+
+Run this from the repo root:
+
+```bash
+python3 scripts/runtime_healthcheck.py
+```
+
+What it checks:
+
+- all core containers are running
+- trade engine / scoring API / Grafana health endpoints respond
+- the configured season still exists
+- bot and market tables are non-empty
+- latest `market_marks`, `bot_orders`, and `bot_metrics` timestamps are still fresh
+- leaderboard still returns all three bots
+
+Useful options:
+
+```bash
+python3 scripts/runtime_healthcheck.py --stale-after-seconds 300
+python3 scripts/runtime_healthcheck.py --season-id season-001
+```
+
+The script exits non-zero on failure, so it can also be used in cron or other automation.
+
+## 8) Useful env knobs
 
 ```env
 MARKET_DATA_SOURCE=synthetic
