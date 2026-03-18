@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: ptl-timescaledb
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./infra/timescaledb/init:/docker-entrypoint-initdb.d
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ptl-grafana
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - timescaledb
+
+  data_ingest:
+    image: python:3.12-slim
+    container_name: ptl-data-ingest
+    working_dir: /app
+    command: sh -c "pip install -r requirements.txt && python src/main.py"
+    env_file:
+      - .env
+    volumes:
+      - ./services/data_ingest:/app
+    depends_on:
+      - timescaledb
+
+  trade_engine:
+    image: python:3.12-slim
+    container_name: ptl-trade-engine
+    working_dir: /app
+    command: sh -c "pip install -r requirements.txt && python src/main.py"
+    env_file:
+      - .env
+    volumes:
+      - ./services/trade_engine:/app
+    ports:
+      - "8088:8088"
+    depends_on:
+      - timescaledb
+
+  scoring_api:
+    image: python:3.12-slim
+    container_name: ptl-scoring-api
+    working_dir: /app
+    command: sh -c "pip install -r requirements.txt && python src/main.py"
+    env_file:
+      - .env
+    volumes:
+      - ./services/scoring_api:/app
+    ports:
+      - "8090:8090"
+    depends_on:
+      - timescaledb
+
+volumes:
+  timescaledb_data:

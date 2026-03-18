@@ -1,0 +1,19 @@
+{
+  "title": "Paper Trader League - Leaderboard Overview",
+  "panels": [
+    {
+      "type": "table",
+      "title": "Latest Leaderboard",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, unrealized_pnl_btc, drawdown_pct, trade_count, fee_btc, ts FROM bot_metrics ORDER BY bot_id, ts DESC;"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s"
+}

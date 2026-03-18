@@ -1,0 +1,6 @@
+ccxt
+pandas
+sqlalchemy
+psycopg2-binary
+requests
+feedparser
