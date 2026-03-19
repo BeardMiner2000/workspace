@@ -40,6 +40,19 @@ def get_latest_balances(cur, season_id: str, bot_id: str) -> dict[str, Decimal]:
     return {row['asset']: d(row['free']) for row in cur.fetchall()}
 
 
+def get_latest_locked(cur, season_id: str, bot_id: str) -> dict[str, Decimal]:
+    cur.execute(
+        """
+        SELECT DISTINCT ON (asset) asset, locked
+        FROM bot_balances
+        WHERE season_id = %s AND bot_id = %s
+        ORDER BY asset, ts DESC
+        """,
+        (season_id, bot_id),
+    )
+    return {row['asset']: d(row['locked']) for row in cur.fetchall()}
+
+
 def get_latest_marks(cur, season_id: str) -> dict[str, Decimal]:
     cur.execute(
         """
@@ -72,19 +85,26 @@ def btc_value(asset: str, qty: Decimal, marks: dict[str, Decimal]) -> Decimal:
     return ZERO
 
 
-def write_balance_snapshots(cur, season_id: str, bot_id: str, balances: dict[str, Decimal], marks: dict[str, Decimal]) -> None:
-    for asset, free in balances.items():
+def write_balance_snapshots(cur, season_id: str, bot_id: str, balances: dict[str, Decimal],
+                            marks: dict[str, Decimal], locked: dict[str, Decimal] | None = None) -> None:
+    locked = locked or {}
+    all_assets = set(balances.keys()) | set(locked.keys())
+    for asset in all_assets:
+        free = balances.get(asset, ZERO)
+        locked_amt = locked.get(asset, ZERO)
+        # For short positions (negative free), btc_mark_value should be negative too
         cur.execute(
             """
             INSERT INTO bot_balances (season_id, bot_id, asset, free, locked, btc_mark_value)
-            VALUES (%s, %s, %s, %s, 0, %s)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (season_id, bot_id, asset, q(free), q(btc_value(asset, free, marks))),
+            (season_id, bot_id, asset, q(free), q(locked_amt), q(btc_value(asset, free, marks))),
         )
 
 
 def recompute_metrics(cur, season_id: str, bot_id: str) -> dict[str, Any]:
     balances = get_latest_balances(cur, season_id, bot_id)
+    locked = get_latest_locked(cur, season_id, bot_id)
     marks = get_latest_marks(cur, season_id)
     cur.execute(
         "SELECT starting_equity_btc FROM seasons WHERE season_id = %s",
@@ -103,9 +123,19 @@ def recompute_metrics(cur, season_id: str, bot_id: str) -> dict[str, Any]:
     fee_btc = d(fill_stats['fee_btc'])
     trade_count = int(fill_stats['trade_count'])
 
+    # Equity = free balances (can be negative for shorts) + locked collateral (USDT margin reserves)
     equity_btc = sum((btc_value(asset, qty, marks) for asset, qty in balances.items()), ZERO)
+    # Add locked USDT margin back into equity (it's still owned, just reserved)
+    for asset, amt in locked.items():
+        if amt > ZERO:
+            equity_btc += btc_value(asset, amt, marks)
     realized_pnl_btc = equity_btc - starting_equity
     positions = {asset: float(q(qty)) for asset, qty in balances.items() if qty != ZERO}
+    # Also include locked collateral in positions display
+    for asset, amt in locked.items():
+        if amt > ZERO:
+            key = f'{asset}_locked'
+            positions[key] = float(q(amt))
     cash_btc = btc_value('BTC', balances.get('BTC', ZERO), marks) + btc_value('USDT', balances.get('USDT', ZERO), marks)
 
     cur.execute(
@@ -181,6 +211,8 @@ def submit_order(*, season_id: str = DEFAULT_SEASON_ID, bot_id: str, symbol: str
             fee_asset = base_asset if side == 'BUY' else quote_asset
             fee_btc = btc_value(fee_asset, fee_qty, {**marks, symbol: fill_price})
 
+            locked = defaultdict(lambda: ZERO, get_latest_locked(cur, season_id, bot_id))
+
             if side == 'BUY':
                 available_quote = balances[quote_asset]
                 if available_quote < gross_quote:
@@ -193,6 +225,78 @@ def submit_order(*, season_id: str = DEFAULT_SEASON_ID, bot_id: str, symbol: str
                     raise ValueError(f'Insufficient {base_asset} balance for {bot_id}: need {quantity}, have {available_base}')
                 balances[base_asset] = available_base - quantity
                 balances[quote_asset] = balances[quote_asset] + gross_quote - fee_qty
+            elif side == 'SHORT':
+                # Margin required = notional * 1.1 safety factor
+                margin_required = gross_quote * Decimal('1.1')
+                available_quote = balances[quote_asset]
+                if available_quote < margin_required:
+                    raise ValueError(
+                        f'Insufficient {quote_asset} margin for {bot_id} SHORT: '
+                        f'need {margin_required} (notional {gross_quote} * 1.1), have {available_quote}'
+                    )
+                # Deduct margin from free USDT, add to locked
+                balances[quote_asset] = available_quote - margin_required
+                locked[quote_asset] = locked[quote_asset] + margin_required
+                # Record short position as negative base asset balance
+                balances[base_asset] = balances[base_asset] - quantity
+                # Store fill price in metadata for COVER PnL calculation
+                metadata['short_open_price'] = float(q(fill_price))
+                # Fee comes from USDT (already deducted margin covers it notionally)
+                fee_asset = quote_asset
+                fee_qty = gross_quote * fee_bps / Decimal('10000')
+                fee_btc = btc_value(fee_asset, fee_qty, {**marks, symbol: fill_price})
+            elif side == 'COVER':
+                # Must have a short position (negative base balance)
+                current_base = balances[base_asset]
+                if current_base >= ZERO:
+                    raise ValueError(
+                        f'No short position in {base_asset} for {bot_id}: balance is {current_base}'
+                    )
+                short_qty = abs(current_base)
+                cover_qty = min(quantity, short_qty)
+
+                # Look up the most recent SHORT order for this symbol to get open price
+                cur.execute(
+                    """
+                    SELECT metadata->>'short_open_price' AS short_open_price
+                    FROM bot_orders
+                    WHERE season_id = %s AND bot_id = %s AND symbol = %s AND side = 'SHORT'
+                    ORDER BY ts DESC
+                    LIMIT 1
+                    """,
+                    (season_id, bot_id, symbol),
+                )
+                short_order = cur.fetchone()
+                if short_order and short_order['short_open_price']:
+                    short_open_price = d(short_order['short_open_price'])
+                else:
+                    # Fallback: assume break-even
+                    short_open_price = fill_price
+
+                # PnL = (open_price - cover_price) * qty
+                pnl = (short_open_price - fill_price) * cover_qty
+                metadata['short_open_price'] = float(q(short_open_price))
+                metadata['cover_price'] = float(q(fill_price))
+                metadata['pnl_usdt'] = float(q(pnl))
+
+                # Release locked margin proportional to coverage
+                proportion = cover_qty / short_qty if short_qty > ZERO else Decimal('1')
+                margin_to_release = locked[quote_asset] * proportion
+                locked[quote_asset] = locked[quote_asset] - margin_to_release
+
+                # Zero out the covered short position
+                balances[base_asset] = current_base + cover_qty  # brings it back toward 0
+
+                # Return margin + PnL to free USDT
+                balances[quote_asset] = balances[quote_asset] + margin_to_release + pnl
+
+                # Fee on cover
+                fee_asset = quote_asset
+                cover_notional = fill_price * cover_qty
+                fee_qty = cover_notional * fee_bps / Decimal('10000')
+                fee_btc = btc_value(fee_asset, fee_qty, {**marks, symbol: fill_price})
+                balances[quote_asset] = balances[quote_asset] - fee_qty
+                quantity = cover_qty
             else:
                 raise ValueError(f'Unsupported side: {side}')
 
@@ -224,7 +328,8 @@ def submit_order(*, season_id: str = DEFAULT_SEASON_ID, bot_id: str, symbol: str
                 ),
             )
             fill = cur.fetchone()
-            write_balance_snapshots(cur, season_id, bot_id, balances, {**marks, symbol: fill_price})
+            write_balance_snapshots(cur, season_id, bot_id, balances, {**marks, symbol: fill_price},
+                                    locked=dict(locked) if side in ('SHORT', 'COVER') else None)
             metrics = recompute_metrics(cur, season_id, bot_id)
             return {
                 'accepted': True,

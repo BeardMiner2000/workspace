@@ -209,12 +209,20 @@ class LeagueRuntime:
 
     def holdings_qty(self, balances: dict[str, Decimal], symbol: str) -> Decimal:
         base, _ = split_symbol(symbol)
-        return balances.get(base, ZERO)
+        qty = balances.get(base, ZERO)
+        return qty if qty > ZERO else ZERO
+
+    def holdings_short_qty(self, balances: dict[str, Decimal], symbol: str) -> Decimal:
+        """Returns absolute value of short position size (negative balance), or 0 if no short."""
+        base, _ = split_symbol(symbol)
+        qty = balances.get(base, ZERO)
+        return abs(qty) if qty < ZERO else ZERO
 
     def usdt_balance(self, balances: dict[str, Decimal]) -> Decimal:
         return balances.get('USDT', ZERO)
 
-    def place_order(self, bot_id: str, symbol: str, side: str, quantity: Decimal, rationale: dict[str, Any]) -> None:
+    def place_order(self, bot_id: str, symbol: str, side: str, quantity: Decimal, rationale: dict[str, Any],
+                    metadata: dict[str, Any] | None = None) -> None:
         quantity = self.quant(quantity)
         if quantity <= ZERO:
             return
@@ -230,6 +238,7 @@ class LeagueRuntime:
                 'runtime': 'synthetic_v1',
                 'tick': self.tick,
                 'event_note': self.last_event_note,
+                **(metadata or {}),
             },
         }
         response = requests.post(f'{self.trade_engine_url}/orders', json=payload, timeout=10)
@@ -319,8 +328,45 @@ class LeagueRuntime:
         balances = state.balances
         usdt = self.usdt_balance(balances)
         held_qty = self.holdings_qty(balances, symbol)
+        short_qty = self.holdings_short_qty(balances, symbol)
         price = state.marks[symbol]
-        if score > 0.05 and usdt > Decimal('70'):
+
+        # --- COVER: close short if momentum reversal or positive event ---
+        if short_qty > ZERO and (fast > 0.018 or state.event_score > 0.6):
+            self.place_order(
+                state.bot_id,
+                symbol,
+                'COVER',
+                short_qty,
+                {
+                    'strategy': 'stormchaser_delta_breakout_v1',
+                    'breakout_score': round(score, 6),
+                    'fast_momentum': round(fast, 6),
+                    'burst_momentum': round(burst, 6),
+                    'event_score': round(state.event_score, 6),
+                    'exit_reason': 'momentum_reversal_or_positive_event',
+                },
+            )
+        # --- SHORT: go short on strong bearish signal ---
+        elif score < -0.05 and state.event_score < -0.8 and usdt >= Decimal('100') and short_qty == ZERO:
+            qty = (usdt * Decimal('0.20')) / price
+            self.place_order(
+                state.bot_id,
+                symbol,
+                'SHORT',
+                qty,
+                {
+                    'strategy': 'stormchaser_delta_breakout_v1',
+                    'breakout_score': round(score, 6),
+                    'fast_momentum': round(fast, 6),
+                    'burst_momentum': round(burst, 6),
+                    'event_score': round(state.event_score, 6),
+                    'micro_volatility': round(vol, 6),
+                    'signal': 'bearish_breakout',
+                },
+            )
+        # --- BUY: existing long entry ---
+        elif score > 0.05 and usdt > Decimal('70') and short_qty == ZERO:
             aggress = Decimal('0.18') if state.event_score < 1.1 else Decimal('0.3')
             qty = (usdt * aggress) / price
             self.place_order(
@@ -337,6 +383,7 @@ class LeagueRuntime:
                     'micro_volatility': round(vol, 6),
                 },
             )
+        # --- SELL: exit long on momentum failure ---
         elif held_qty > ZERO and (fast < -0.018 or state.event_score < -0.8):
             self.place_order(
                 state.bot_id,
