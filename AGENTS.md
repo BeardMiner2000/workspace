@@ -207,6 +207,27 @@ Think of it like a human reviewing their journal and updating their mental model
 
 The goal: Be helpful without being annoying. Check in a few times a day, do useful background work, but respect quiet time.
 
+## 🪙 Token Efficiency Rules (Important!)
+
+Token usage hit API limits on 2026-03-19 from heavy subagent use. Follow these rules:
+
+### Subagent model routing
+- **Default subagents**: use `haiku` (set in config) for analysis, file reading, summarization
+- **Explicitly upgrade to `sonnet`** only when: complex reasoning required, generating significant new code, or multi-step problem solving
+- **Never use Sonnet for**: reading files, summarizing CSVs, simple search/grep tasks
+
+### Context chunking for coding/analysis tasks
+- **Never load raw CSVs or large data files into LLM context** — use SQL queries to get summaries instead
+- Pass targeted summaries (10-20 lines) to subagents, not full file dumps
+- For bot analysis: query DB for stats, don't dump 64K-row CSV files
+- For code tasks: read only the relevant function/section, not the entire file
+
+### Subagent hygiene
+- Max 4 parallel subagents for analysis tasks
+- Max 2 parallel subagents for heavy coding tasks
+- Prefer 1 well-scoped subagent over 4 loosely scoped ones
+- Always specify the model explicitly when spawning high-value tasks that need Sonnet
+
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.
