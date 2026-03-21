@@ -1,5 +1,74 @@
 import AppKit
 import SwiftUI
+import Security
+
+// MARK: - License Manager (Simplified)
+
+class LicenseManager {
+    static let shared = LicenseManager()
+    
+    private let keychainService = "com.jl.StillMode.License"
+    private let licenseKeyAttribute = "LicenseKey"
+    
+    var isPremium: Bool {
+        return getLicenseKey() != nil
+    }
+    
+    private func getLicenseKey() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: licenseKeyAttribute,
+            kSecReturnData as String: true
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let key = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        
+        return key
+    }
+    
+    func activateLicense(key: String) -> Bool {
+        guard isValidFormat(key) else { return false }
+        
+        guard let data = key.data(using: .utf8) else { return false }
+        
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: licenseKeyAttribute
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        let addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: licenseKeyAttribute,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+        ]
+        
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        return status == errSecSuccess
+    }
+    
+    private func isValidFormat(_ key: String) -> Bool {
+        let pattern = "^STILLMODE-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return false
+        }
+        let range = NSRange(key.startIndex..., in: key)
+        return regex.firstMatch(in: key, options: [], range: range) != nil
+    }
+}
+
+// MARK: - App Delegate
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     
@@ -70,13 +139,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             // IDLE STATE
             let apps = focusManager.runningUserApps()
+            let isPremium = LicenseManager.shared.isPremium
             
             if apps.isEmpty {
                 let noApps = NSMenuItem(title: "No apps running", action: nil, keyEquivalent: "")
                 noApps.isEnabled = false
                 menu.addItem(noApps)
             } else {
-                let chooseLabel = NSMenuItem(title: "Select app to focus on:", action: nil, keyEquivalent: "")
+                let chooseLabel = NSMenuItem(title: isPremium ? "Select app(s) to focus on:" : "Select app to focus on:", action: nil, keyEquivalent: "")
                 chooseLabel.isEnabled = false
                 menu.addItem(chooseLabel)
                 
@@ -127,6 +197,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         menu.addItem(.separator())
         
+        // Show license info / upgrade button
+        if !LicenseManager.shared.isPremium {
+            let upgradeItem = NSMenuItem(title: "Upgrade to Premium", action: #selector(showUpgradePrompt), keyEquivalent: "")
+            upgradeItem.target = self
+            menu.addItem(upgradeItem)
+            menu.addItem(.separator())
+        } else {
+            let licenseItem = NSMenuItem(title: "✓ Premium Active", action: nil, keyEquivalent: "")
+            licenseItem.isEnabled = false
+            menu.addItem(licenseItem)
+            menu.addItem(.separator())
+        }
+        
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
         
@@ -156,5 +239,60 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.buildAndShowMenu()
             }
         }
+    }
+    
+    @objc func showUpgradePrompt() {
+        let alert = NSAlert()
+        alert.messageText = "Upgrade to Still Mode Premium"
+        alert.informativeText = "Premium unlocks:\n• Focus on multiple apps\n• Focus timers (15m, 30m, 1h)\n• Session history & stats\n\nOne-time purchase: $2.99"
+        alert.addButton(withTitle: "Learn More")
+        alert.addButton(withTitle: "Enter License Key")
+        alert.addButton(withTitle: "Cancel")
+        
+        let response = alert.runModal()
+        
+        switch response {
+        case .alertFirstButtonReturn:
+            // Open website
+            NSWorkspace.shared.open(URL(string: "https://stillmode.app")!)
+        case .alertSecondButtonReturn:
+            // Show license entry dialog
+            showLicenseEntryDialog()
+        default:
+            break
+        }
+    }
+    
+    private func showLicenseEntryDialog() {
+        let alert = NSAlert()
+        alert.messageText = "Enter License Key"
+        alert.informativeText = "Paste your license key (format: STILLMODE-XXXX-XXXX-XXXX)"
+        
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        textField.placeholderString = "STILLMODE-XXXX-XXXX-XXXX"
+        alert.accessoryView = textField
+        
+        alert.addButton(withTitle: "Activate")
+        alert.addButton(withTitle: "Cancel")
+        
+        let response = alert.runModal()
+        
+        if response == .alertFirstButtonReturn, !textField.stringValue.isEmpty {
+            if LicenseManager.shared.activateLicense(key: textField.stringValue) {
+                NSAlert(title: "Success", message: "License activated! Restart the app to see premium features.").runModal()
+                buildAndShowMenu()
+            } else {
+                NSAlert(title: "Invalid License", message: "The license key format is incorrect or invalid.").runModal()
+            }
+        }
+    }
+}
+
+extension NSAlert {
+    convenience init(title: String, message: String) {
+        self.init()
+        self.messageText = title
+        self.informativeText = message
+        self.addButton(withTitle: "OK")
     }
 }
