@@ -1,0 +1,37 @@
+name: StillMode
+options:
+  bundleIdPrefix: com.jl
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    PRODUCT_NAME: StillMode
+    PRODUCT_BUNDLE_IDENTIFIER: com.jl.StillMode
+    CODE_SIGN_STYLE: Automatic
+    INFOPLIST_FILE: StillMode/Info.plist
+
+targets:
+  StillMode:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: StillMode
+        excludes:
+          - "**/*.plist"
+    resources:
+      - StillMode/Assets.xcassets
+    info:
+      path: StillMode/Info.plist
+    settings:
+      base:
+        INFOPLIST_FILE: StillMode/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.jl.StillMode
+        PRODUCT_NAME: StillMode
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SWIFT_VERSION: "5.9"
+        OTHER_LDFLAGS: "-framework AudioToolbox"
