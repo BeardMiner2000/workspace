@@ -2,217 +2,158 @@ import AppKit
 import Foundation
 import AudioToolbox
 
-class FocusManager {
-
-    // MARK: - State
-
-    private(set) var isActive: Bool = false
-    private(set) var focusedApps: [NSRunningApplication] = []  // Allow multiple apps
-    private var hiddenApps: [NSRunningApplication] = []
-    private var overlayWindows: [NSWindow] = []
+class FocusManager: NSObject {
     
-    // NEW: Prevent re-entrance during transitions
-    private var isTransitioning: Bool = false
-
+    // MARK: - State
+    
+    private(set) var isActive: Bool = false
+    private(set) var focusedApp: NSRunningApplication?
+    private var hiddenApps: [NSRunningApplication] = []
+    private var appActivationObserver: NSObjectProtocol?
+    
+    // MARK: - Initialization
+    
+    override init() {
+        super.init()
+    }
+    
     // MARK: - Public API
-
-    /// Enter Still Mode: hide everything except selected apps, enable DND.
-    func enter(focusOn apps: [NSRunningApplication], completion: @escaping () -> Void) {
-        guard !isActive && !isTransitioning else { return }  // NEW: guard against re-entrance
-
-        isTransitioning = true
-
+    
+    func enter(focusOn app: NSRunningApplication, completion: @escaping () -> Void) {
+        guard !isActive else { return }
+        
         isActive = true
-        focusedApps = apps
+        focusedApp = app
         hiddenApps = []
-
-        // Snapshot running apps before we touch anything
-        let appsToHide = NSWorkspace.shared.runningApplications.filter { runningApp in
-            runningApp.activationPolicy == .regular &&
-            !apps.contains(where: { $0.bundleIdentifier == runningApp.bundleIdentifier }) &&
-            !runningApp.isHidden
-        }
-
-        // Hide them all
-        for runningApp in appsToHide {
-            if runningApp.hide() {
-                hiddenApps.append(runningApp)
+        
+        // Snapshot all running apps
+        let allApps = NSWorkspace.shared.runningApplications
+        
+        // Hide all except the focused app
+        for runningApp in allApps {
+            // Skip system apps, the focused app, and already-hidden apps
+            if runningApp.activationPolicy == .regular &&
+               runningApp.bundleIdentifier != app.bundleIdentifier &&
+               !runningApp.isHidden {
+                if runningApp.hide() {
+                    hiddenApps.append(runningApp)
+                }
             }
         }
-
-        // Create black overlay on all screens
-        createOverlayWindows()
-
-        // Bring first focused app to front
-        if let firstApp = apps.first {
-            firstApp.activate(options: [.activateIgnoringOtherApps])
-        }
-
-        // Re-layer overlays AFTER app activation to ensure they stay behind focused app
-        for overlay in overlayWindows {
-            overlay.orderBack(nil)
-        }
-
-        // Enable DND
+        
+        // Bring focused app to front
+        app.activate(options: [.activateIgnoringOtherApps])
+        
+        // Enable Do Not Disturb
         setDoNotDisturb(enabled: true)
-
-        // Play a soft sound (optional ambient tone)
+        
+        // Play entry tone
         playFocusTone()
-
-        isTransitioning = false  // NEW: transition complete
+        
+        // Monitor for rogue app activations and block them
+        startMonitoringActivations()
+        
         completion()
     }
-
-    /// Exit Still Mode: unhide tracked apps, disable DND.
+    
     func exit(completion: @escaping () -> Void) {
-        guard isActive && !isTransitioning else { return }  // NEW: guard against re-entrance
-
-        isTransitioning = true
-
+        guard isActive else { return }
+        
         isActive = false
-
-        // Remove black overlay
-        destroyOverlayWindows()
-
+        
+        // Stop monitoring
+        stopMonitoringActivations()
+        
         // Unhide all tracked apps
         for app in hiddenApps {
             app.unhide()
         }
         hiddenApps = []
-        focusedApps = []
-
-        // Disable DND
+        focusedApp = nil
+        
+        // Disable Do Not Disturb
         setDoNotDisturb(enabled: false)
-
+        
         // Play exit tone
         playExitTone()
-
-        isTransitioning = false  // NEW: transition complete
+        
         completion()
     }
-
-    // MARK: - App List
-
-    /// Returns running apps with a regular activation policy (visible in Dock/Cmd-Tab), excluding self.
-    func runningUserApps() -> [NSRunningApplication] {
-        let selfBundle = Bundle.main.bundleIdentifier
-
-        return NSWorkspace.shared.runningApplications
-            .filter { app in
-                app.activationPolicy == .regular &&
-                app.bundleIdentifier != selfBundle &&
-                app.localizedName != nil
+    
+    // MARK: - App Monitoring
+    
+    private func startMonitoringActivations() {
+        // Monitor when apps try to activate via NSWorkspace notifications
+        appActivationObserver = NotificationCenter.default.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: NSWorkspace.shared,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self, self.isActive else { return }
+            
+            if let activatedApp = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
+                // If a non-focused app tries to activate, immediately reactivate the focused app
+                if activatedApp.bundleIdentifier != self.focusedApp?.bundleIdentifier {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self.focusedApp?.activate(options: [.activateIgnoringOtherApps])
+                    }
+                }
             }
-            .sorted { ($0.localizedName ?? "") < ($1.localizedName ?? "") }
-    }
-
-    // MARK: - Do Not Disturb
-
-    private func setDoNotDisturb(enabled: Bool) {
-        // macOS 12+: Focus/DND via defaults + notification center restart
-        // This approach writes to the NCPreferencesController domain.
-        // Note: Full Focus control requires user to set up a Focus in System Settings.
-        // We use the legacy `doNotDisturb` key that still works on macOS 13/14.
-
-        let value = enabled ? 1 : 0
-
-        // Primary: com.apple.notificationcenterui (used in older macOS)
-        let task1 = Process()
-        task1.launchPath = "/usr/bin/defaults"
-        task1.arguments = ["-currentHost", "write", "com.apple.notificationcenterui",
-                           "doNotDisturb", "-bool", enabled ? "TRUE" : "FALSE"]
-        try? task1.run()
-        task1.waitUntilExit()
-
-        // Also set the scheduled DND start/end to now if enabling (belt-and-suspenders)
-        if enabled {
-            let task2 = Process()
-            task2.launchPath = "/usr/bin/defaults"
-            task2.arguments = ["-currentHost", "write", "com.apple.notificationcenterui",
-                               "doNotDisturbDate", "-date", iso8601Now()]
-            try? task2.run()
-            task2.waitUntilExit()
         }
-
-        // Kick notification center to pick up the change
+    }
+    
+    private func stopMonitoringActivations() {
+        if let observer = appActivationObserver {
+            NotificationCenter.default.removeObserver(observer)
+            appActivationObserver = nil
+        }
+    }
+    
+    // MARK: - Do Not Disturb
+    
+    private func setDoNotDisturb(enabled: Bool) {
+        let value = enabled ? 1 : 0
+        
+        // Method 1: Try modern Focus API if available (macOS 12+)
+        if #available(macOS 12.0, *) {
+            // Focus mode via defaults (newer approach)
+            let process = Process()
+            process.launchPath = "/usr/bin/defaults"
+            process.arguments = ["-currentHost", "write", "com.apple.notificationcenterui", "doNotDisturb", "-int", "\(value)"]
+            try? process.run()
+            process.waitUntilExit()
+        }
+        
+        // Method 2: Legacy DND via defaults
+        let task = Process()
+        task.launchPath = "/usr/bin/defaults"
+        task.arguments = ["-currentHost", "write", "com.apple.notificationcenterui", "doNotDisturb", "-bool", enabled ? "TRUE" : "FALSE"]
+        try? task.run()
+        task.waitUntilExit()
+        
+        // Notify the system
         let killTask = Process()
         killTask.launchPath = "/usr/bin/killall"
         killTask.arguments = ["-HUP", "NotificationCenter"]
         try? killTask.run()
         killTask.waitUntilExit()
-
-        // macOS 15+: also toggle Focus via osascript if available
-        toggleFocusViaAppleScript(enabled: enabled)
-
-        _ = value // suppress warning
     }
-
-    private func iso8601Now() -> String {
-        let formatter = ISO8601DateFormatter()
-        return formatter.string(from: Date())
-    }
-
-    /// Best-effort Focus toggle via AppleScript (macOS 12+).
-    /// Falls back silently if not permitted.
-    private func toggleFocusViaAppleScript(enabled: Bool) {
-        let script = enabled
-            ? "tell application \"System Events\" to tell dock preferences to set autohide to true"
-            : "tell application \"System Events\" to tell dock preferences to set autohide to false"
-        // Note: full Focus toggle requires Automation permission, which prompts on first run.
-        // We skip that here to avoid unwanted permission dialogs.
-        _ = script // reserved for future use
-    }
-
+    
     // MARK: - Audio Feedback
-
+    
     private func playFocusTone() {
-        // Use a built-in system sound for a soft chime
         AudioServicesPlaySystemSound(1013)  // Tink
     }
-
+    
     private func playExitTone() {
         AudioServicesPlaySystemSound(1006)  // Pop
     }
-
-    // MARK: - Overlay Windows (Black out background)
-
-    private func createOverlayWindows() {
-        // Create a full-screen black window on each screen, visible on ALL spaces
-        for screen in NSScreen.screens {
-            let overlay = NSWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false, screen: screen)
-            
-            // CRITICAL: Use a LOWER level so focused app can intercept Cmd+Tab
-            // Set to just above desktop but below regular windows
-            overlay.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.normalWindow)) - 1)
-            overlay.backgroundColor = NSColor.black.withAlphaComponent(0.98)
-            overlay.isOpaque = true
-            overlay.hidesOnDeactivate = false
-            overlay.canHide = false
-            overlay.isReleasedWhenClosed = false
-            
-            // Key: appear on ALL spaces including fullscreen
-            overlay.collectionBehavior = NSWindow.CollectionBehavior([
-                .canJoinAllSpaces,           // Visible on all spaces
-                .ignoresCycle,               // Don't include in Cmd+Tab
-                .fullScreenAuxiliary         // Show on fullscreen spaces too
-            ])
-            
-            // Block BOTH mouse and keyboard events from reaching this window
-            overlay.ignoresMouseEvents = true
-            
-            // CRITICAL: Make this window completely non-interactive
-            // Prevents it from stealing key events
-            overlay.acceptsMouseMovedEvents = false
-            
-            overlay.orderBack(nil)
-            overlayWindows.append(overlay)
+    
+    // MARK: - Utility
+    
+    func runningUserApps() -> [NSRunningApplication] {
+        return NSWorkspace.shared.runningApplications.filter { app in
+            app.activationPolicy == .regular
         }
-    }
-
-    private func destroyOverlayWindows() {
-        for overlay in overlayWindows {
-            overlay.close()
-        }
-        overlayWindows = []
     }
 }
