@@ -83,10 +83,10 @@ class FocusManager: NSObject {
     // MARK: - App Monitoring
     
     private func startMonitoringActivations() {
-        // Monitor when apps try to activate via NSWorkspace notifications
-        appActivationObserver = NotificationCenter.default.addObserver(
+        // Monitor when apps try to activate via NSWorkspace's notification center
+        appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
-            object: NSWorkspace.shared,
+            object: nil,
             queue: .main
         ) { [weak self] notification in
             guard let self = self, self.isActive else { return }

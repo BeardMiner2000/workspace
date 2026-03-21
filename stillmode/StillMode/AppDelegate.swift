@@ -86,11 +86,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     item.target = self
                     item.representedObject = app
                     
-                    // Add app icon if available
-                    if let icon = app.icon {
-                        let img = icon.copy() as! NSImage
-                        img.size = NSSize(width: 16, height: 16)
-                        item.image = img
+                    // Add app icon if available (safely)
+                    if let icon = app.icon, let img = icon.copy() as? NSImage {
+                        let resized = NSImage(size: NSSize(width: 16, height: 16))
+                        resized.lockFocus()
+                        icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
+                        resized.unlockFocus()
+                        item.image = resized
                     }
                     
                     // Checkmark if selected
@@ -136,10 +138,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func selectApp(_ sender: NSMenuItem) {
         selectedApp = sender.representedObject as? NSRunningApplication
-        // Rebuild menu to show updated button state
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.buildAndShowMenu()
-        }
+        // Don't rebuild; let the menu close naturally. User clicks again to confirm.
     }
     
     @objc func enterStillMode() {
