@@ -7,23 +7,24 @@ class FocusManager {
     // MARK: - State
 
     private(set) var isActive: Bool = false
-    private(set) var focusedApp: NSRunningApplication?
+    private(set) var focusedApps: [NSRunningApplication] = []  // Allow multiple apps
     private var hiddenApps: [NSRunningApplication] = []
+    private var overlayWindows: [NSWindow] = []
 
     // MARK: - Public API
 
-    /// Enter Still Mode: hide everything except `app`, bring `app` front, enable DND.
-    func enter(focusOn app: NSRunningApplication, completion: @escaping () -> Void) {
+    /// Enter Still Mode: hide everything except selected apps, enable DND.
+    func enter(focusOn apps: [NSRunningApplication], completion: @escaping () -> Void) {
         guard !isActive else { return }
 
         isActive = true
-        focusedApp = app
+        focusedApps = apps
         hiddenApps = []
 
         // Snapshot running apps before we touch anything
         let appsToHide = NSWorkspace.shared.runningApplications.filter { runningApp in
             runningApp.activationPolicy == .regular &&
-            runningApp.bundleIdentifier != app.bundleIdentifier &&
+            !apps.contains(where: { $0.bundleIdentifier == runningApp.bundleIdentifier }) &&
             !runningApp.isHidden
         }
 
@@ -34,8 +35,18 @@ class FocusManager {
             }
         }
 
-        // Bring focus app to front
-        app.activate(options: [.activateIgnoringOtherApps])
+        // Create black overlay on all screens (very high z-level to always be visible)
+        createOverlayWindows()
+
+        // Bring first focused app to front
+        if let firstApp = apps.first {
+            firstApp.activate(options: [.activateIgnoringOtherApps])
+        }
+
+        // Re-layer overlays to ensure they stay behind focused apps
+        for overlay in overlayWindows {
+            overlay.orderBack(nil)
+        }
 
         // Enable DND
         setDoNotDisturb(enabled: true)
@@ -52,12 +63,15 @@ class FocusManager {
 
         isActive = false
 
+        // Remove black overlay
+        destroyOverlayWindows()
+
         // Unhide all tracked apps
         for app in hiddenApps {
             app.unhide()
         }
         hiddenApps = []
-        focusedApp = nil
+        focusedApps = []
 
         // Disable DND
         setDoNotDisturb(enabled: false)
@@ -149,5 +163,40 @@ class FocusManager {
 
     private func playExitTone() {
         AudioServicesPlaySystemSound(1006)  // Pop
+    }
+
+    // MARK: - Overlay Windows (Black out background)
+
+    private func createOverlayWindows() {
+        // Create a full-screen black window on each screen, visible on ALL spaces
+        for screen in NSScreen.screens {
+            let overlay = NSWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false, screen: screen)
+            
+            // HIGH z-level — above everything except focused app windows
+            overlay.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.floatingWindow)))
+            overlay.backgroundColor = NSColor.black.withAlphaComponent(0.98)
+            overlay.isOpaque = true
+            overlay.hidesOnDeactivate = false
+            overlay.canHide = false
+            overlay.isReleasedWhenClosed = false
+            
+            // Key: appear on ALL spaces including fullscreen
+            overlay.collectionBehavior = NSWindow.CollectionBehavior([
+                .canJoinAllSpaces,           // Visible on all spaces
+                .ignoresCycle,               // Don't include in Cmd+Tab
+                .fullScreenAuxiliary         // Show on fullscreen spaces too
+            ])
+            
+            overlay.ignoresMouseEvents = true  // Allow clicks to pass through to focused app
+            overlay.orderFront(nil)  // Bring to front
+            overlayWindows.append(overlay)
+        }
+    }
+
+    private func destroyOverlayWindows() {
+        for overlay in overlayWindows {
+            overlay.close()
+        }
+        overlayWindows = []
     }
 }

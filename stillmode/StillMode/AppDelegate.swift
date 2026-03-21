@@ -5,11 +5,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var statusItem: NSStatusItem?
     var focusManager = FocusManager()
-    var selectedApp: NSRunningApplication?
+    var selectedApps: Set<String> = []  // Track selected app bundle IDs
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide from Dock (belt-and-suspenders in case LSUIElement not set at build time)
         NSApp.setActivationPolicy(.accessory)
+        
+        // Post a notification to verify this is running
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NSApplication.shared.dockTile.badgeLabel = "RUNNING"
+        }
 
         setupStatusItem()
     }
@@ -18,6 +23,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        
+        print("🔍 DEBUG: statusItem created: \(statusItem != nil)")
+        print("🔍 DEBUG: statusItem.button: \(statusItem?.button != nil)")
 
         if let button = statusItem?.button {
             button.title = "🌙"
@@ -25,6 +33,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(statusItemClicked)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            print("🔍 DEBUG: statusItem button configured")
+        } else {
+            print("🔍 DEBUG: ERROR - statusItem or button is nil!")
         }
     }
 
@@ -37,10 +48,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Menu
 
     @objc func statusItemClicked() {
-        buildAndShowMenu()
+        let menu = buildMenu()
+        statusItem?.menu = menu
+        // Don't call performClick — it closes the menu. Just set it and let the system show it.
     }
 
-    func buildAndShowMenu() {
+    private func buildMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
@@ -56,8 +69,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if focusManager.isActive {
             // ── ACTIVE STATE ──
-            let focusedName = focusManager.focusedApp?.localizedName ?? "Unknown"
-            let statusItem = NSMenuItem(title: "Focusing on: \(focusedName)", action: nil, keyEquivalent: "")
+            let appNames = focusManager.focusedApps.compactMap { $0.localizedName }.joined(separator: ", ")
+            let statusItem = NSMenuItem(title: "Focusing: \(appNames)", action: nil, keyEquivalent: "")
             statusItem.isEnabled = false
             menu.addItem(statusItem)
 
@@ -76,13 +89,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 noApps.isEnabled = false
                 menu.addItem(noApps)
             } else {
-                let chooseLabel = NSMenuItem(title: "Focus on…", action: nil, keyEquivalent: "")
+                let chooseLabel = NSMenuItem(title: "Select apps to keep visible:", action: nil, keyEquivalent: "")
                 chooseLabel.isEnabled = false
                 menu.addItem(chooseLabel)
 
                 for app in apps {
                     let name = app.localizedName ?? app.bundleIdentifier ?? "Unknown"
-                    let item = NSMenuItem(title: "  \(name)", action: #selector(selectApp(_:)), keyEquivalent: "")
+                    let item = NSMenuItem(title: "  \(name)", action: #selector(toggleApp(_:)), keyEquivalent: "")
                     item.target = self
                     item.representedObject = app
 
@@ -94,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
 
                     // Checkmark if selected
-                    if let sel = selectedApp, sel == app {
+                    if let bundleID = app.bundleIdentifier, selectedApps.contains(bundleID) {
                         item.state = .on
                     }
                     menu.addItem(item)
@@ -103,12 +116,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 menu.addItem(.separator())
 
                 let enterItem = NSMenuItem(
-                    title: selectedApp != nil ? "Enter Still Mode  ✓" : "Enter Still Mode",
-                    action: selectedApp != nil ? #selector(enterStillMode) : nil,
-                    keyEquivalent: selectedApp != nil ? "\r" : ""
+                    title: "Ready to be Still 🧘",
+                    action: !selectedApps.isEmpty ? #selector(enterStillMode) : nil,
+                    keyEquivalent: !selectedApps.isEmpty ? "\r" : ""
                 )
                 enterItem.target = self
-                enterItem.isEnabled = selectedApp != nil
+                enterItem.isEnabled = !selectedApps.isEmpty
+                
+                // Make it bold when enabled (white text, just like other items)
+                if !selectedApps.isEmpty {
+                    let attrs: [NSAttributedString.Key: Any] = [
+                        .font: NSFont.boldSystemFont(ofSize: 13)
+                    ]
+                    enterItem.attributedTitle = NSAttributedString(string: "Ready to be Still 🧘", attributes: attrs)
+                }
+                
                 menu.addItem(enterItem)
             }
         }
@@ -118,20 +140,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
 
-        statusItem?.menu = menu
-        statusItem?.button?.performClick(nil)
-        statusItem?.menu = nil  // Clear so next click rebuilds fresh
+        return menu
     }
 
     // MARK: - Actions
 
-    @objc func selectApp(_ sender: NSMenuItem) {
-        selectedApp = sender.representedObject as? NSRunningApplication
+    @objc func toggleApp(_ sender: NSMenuItem) {
+        guard let app = sender.representedObject as? NSRunningApplication,
+              let bundleID = app.bundleIdentifier else { return }
+        
+        if selectedApps.contains(bundleID) {
+            selectedApps.remove(bundleID)
+        } else {
+            selectedApps.insert(bundleID)
+        }
+        
+        // Rebuild the menu but keep it open
+        buildAndShowMenuKeepOpen()
+    }
+    
+    private func buildAndShowMenuKeepOpen() {
+        // Rebuild menu and show it WITHOUT closing
+        let newMenu = buildMenu()
+        statusItem?.menu = newMenu
+        // The system will keep the menu open since we're already in it
     }
 
     @objc func enterStillMode() {
-        guard let app = selectedApp else { return }
-        focusManager.enter(focusOn: app) { [weak self] in
+        let selectedAppsObjects = focusManager.runningUserApps().filter { app in
+            if let bundleID = app.bundleIdentifier {
+                return selectedApps.contains(bundleID)
+            }
+            return false
+        }
+        
+        guard !selectedAppsObjects.isEmpty else { return }
+        
+        focusManager.enter(focusOn: selectedAppsObjects) { [weak self] in
             self?.updateIcon(active: true)
         }
     }
@@ -139,7 +184,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func exitStillMode() {
         focusManager.exit { [weak self] in
             self?.updateIcon(active: false)
-            self?.selectedApp = nil
+            self?.selectedApps = []
+            // Rebuild menu to show idle state
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self?.buildAndShowMenuKeepOpen()
+            }
         }
     }
 }
