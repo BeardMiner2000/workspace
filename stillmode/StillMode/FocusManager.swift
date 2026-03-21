@@ -104,7 +104,7 @@ class FocusManager: NSObject {
     
     private func stopMonitoringActivations() {
         if let observer = appActivationObserver {
-            NotificationCenter.default.removeObserver(observer)
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
             appActivationObserver = nil
         }
     }
