@@ -10,12 +10,17 @@ class FocusManager {
     private(set) var focusedApps: [NSRunningApplication] = []  // Allow multiple apps
     private var hiddenApps: [NSRunningApplication] = []
     private var overlayWindows: [NSWindow] = []
+    
+    // NEW: Prevent re-entrance during transitions
+    private var isTransitioning: Bool = false
 
     // MARK: - Public API
 
     /// Enter Still Mode: hide everything except selected apps, enable DND.
     func enter(focusOn apps: [NSRunningApplication], completion: @escaping () -> Void) {
-        guard !isActive else { return }
+        guard !isActive && !isTransitioning else { return }  // NEW: guard against re-entrance
+
+        isTransitioning = true
 
         isActive = true
         focusedApps = apps
@@ -35,7 +40,7 @@ class FocusManager {
             }
         }
 
-        // Create black overlay on all screens (very high z-level to always be visible)
+        // Create black overlay on all screens
         createOverlayWindows()
 
         // Bring first focused app to front
@@ -43,7 +48,7 @@ class FocusManager {
             firstApp.activate(options: [.activateIgnoringOtherApps])
         }
 
-        // Re-layer overlays to ensure they stay behind focused apps
+        // Re-layer overlays AFTER app activation to ensure they stay behind focused app
         for overlay in overlayWindows {
             overlay.orderBack(nil)
         }
@@ -54,12 +59,15 @@ class FocusManager {
         // Play a soft sound (optional ambient tone)
         playFocusTone()
 
+        isTransitioning = false  // NEW: transition complete
         completion()
     }
 
     /// Exit Still Mode: unhide tracked apps, disable DND.
     func exit(completion: @escaping () -> Void) {
-        guard isActive else { return }
+        guard isActive && !isTransitioning else { return }  // NEW: guard against re-entrance
+
+        isTransitioning = true
 
         isActive = false
 
@@ -79,6 +87,7 @@ class FocusManager {
         // Play exit tone
         playExitTone()
 
+        isTransitioning = false  // NEW: transition complete
         completion()
     }
 
@@ -172,8 +181,9 @@ class FocusManager {
         for screen in NSScreen.screens {
             let overlay = NSWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false, screen: screen)
             
-            // HIGH z-level — above everything except focused app windows
-            overlay.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.floatingWindow)))
+            // CRITICAL: Use a LOWER level so focused app can intercept Cmd+Tab
+            // Set to just above desktop but below regular windows
+            overlay.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.normalWindow)) - 1)
             overlay.backgroundColor = NSColor.black.withAlphaComponent(0.98)
             overlay.isOpaque = true
             overlay.hidesOnDeactivate = false
@@ -187,8 +197,14 @@ class FocusManager {
                 .fullScreenAuxiliary         // Show on fullscreen spaces too
             ])
             
-            overlay.ignoresMouseEvents = true  // Allow clicks to pass through to focused app
-            overlay.orderFront(nil)  // Bring to front
+            // Block BOTH mouse and keyboard events from reaching this window
+            overlay.ignoresMouseEvents = true
+            
+            // CRITICAL: Make this window completely non-interactive
+            // Prevents it from stealing key events
+            overlay.acceptsMouseMovedEvents = false
+            
+            overlay.orderBack(nil)
             overlayWindows.append(overlay)
         }
     }

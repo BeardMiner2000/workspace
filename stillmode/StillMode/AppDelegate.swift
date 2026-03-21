@@ -55,6 +55,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
+        buildMenuItems(into: menu)
+        return menu
+    }
+
+    private func buildAndShowMenuKeepOpen() {
+        // Rebuild the menu to show updated state (exit button gone, app list back)
+        let newMenu = buildMenu()
+        statusItem?.menu = newMenu
+    }
+
+    // MARK: - Actions
+
+    @objc func toggleApp(_ sender: NSMenuItem) {
+        guard let app = sender.representedObject as? NSRunningApplication,
+              let bundleID = app.bundleIdentifier else { return }
+        
+        if selectedApps.contains(bundleID) {
+            selectedApps.remove(bundleID)
+        } else {
+            selectedApps.insert(bundleID)
+        }
+        
+        // Schedule menu rebuild AFTER this action handler completes
+        // This avoids closing the menu due to NSStatusItem.menu assignment
+        DispatchQueue.main.async {
+            self.rebuildMenuWithoutClosing()
+        }
+    }
+    
+    private func rebuildMenuWithoutClosing() {
+        if let menu = statusItem?.menu {
+            // Clear old items but keep menu alive by modifying in-place
+            menu.removeAllItems()
+            // Rebuild items in-place
+            buildMenuItems(into: menu)
+        }
+    }
+    
+    private func buildMenuItems(into menu: NSMenu) {
         menu.autoenablesItems = false
 
         // Title
@@ -76,7 +115,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             menu.addItem(.separator())
 
-            let exitItem = NSMenuItem(title: "Exit Still Mode", action: #selector(exitStillMode), keyEquivalent: "e")
+            let exitItem = NSMenuItem(title: "Exit Still Mode", action: #selector(exitStillMode), keyEquivalent: "\u{1B}")  // Escape key
             exitItem.target = self
             menu.addItem(exitItem)
 
@@ -139,31 +178,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
-
-        return menu
-    }
-
-    // MARK: - Actions
-
-    @objc func toggleApp(_ sender: NSMenuItem) {
-        guard let app = sender.representedObject as? NSRunningApplication,
-              let bundleID = app.bundleIdentifier else { return }
-        
-        if selectedApps.contains(bundleID) {
-            selectedApps.remove(bundleID)
-        } else {
-            selectedApps.insert(bundleID)
-        }
-        
-        // Rebuild the menu but keep it open
-        buildAndShowMenuKeepOpen()
-    }
-    
-    private func buildAndShowMenuKeepOpen() {
-        // Rebuild menu and show it WITHOUT closing
-        let newMenu = buildMenu()
-        statusItem?.menu = newMenu
-        // The system will keep the menu open since we're already in it
     }
 
     @objc func enterStillMode() {
