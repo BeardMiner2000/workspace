@@ -10,6 +10,7 @@ class FocusManager: NSObject {
     private(set) var focusedApp: NSRunningApplication?
     private var hiddenApps: [NSRunningApplication] = []
     private var appActivationObserver: NSObjectProtocol?
+    private var overlayWindows: [NSWindow] = []
     
     // MARK: - Initialization
     
@@ -44,6 +45,9 @@ class FocusManager: NSObject {
         // Bring focused app to front
         app.activate(options: [.activateIgnoringOtherApps])
         
+        // Show blackout overlay on all other screens
+        showOverlay()
+        
         // Enable Do Not Disturb
         setDoNotDisturb(enabled: true)
         
@@ -63,6 +67,9 @@ class FocusManager: NSObject {
         
         // Stop monitoring
         stopMonitoringActivations()
+        
+        // Hide overlay
+        hideOverlay()
         
         // Unhide all tracked apps
         for app in hiddenApps {
@@ -147,6 +154,39 @@ class FocusManager: NSObject {
     
     private func playExitTone() {
         AudioServicesPlaySystemSound(1006)  // Pop
+    }
+    
+    // MARK: - Overlay Management
+    
+    private func showOverlay() {
+        // Create overlay window on each screen
+        for screen in NSScreen.screens {
+            let overlay = NSWindow(
+                contentRect: screen.frame,
+                styleMask: .borderless,
+                backing: .buffered,
+                defer: false,
+                screen: screen
+            )
+            
+            // Set window properties
+            overlay.backgroundColor = NSColor.black.withAlphaComponent(0.85)
+            overlay.isOpaque = true
+            overlay.level = .screenSaver  // Below notifications, above normal windows
+            overlay.ignoresMouseEvents = true
+            overlay.hidesOnDeactivate = false
+            
+            // Make it visible
+            overlay.orderFront(nil)
+            overlayWindows.append(overlay)
+        }
+    }
+    
+    private func hideOverlay() {
+        for overlay in overlayWindows {
+            overlay.close()
+        }
+        overlayWindows = []
     }
     
     // MARK: - Utility
