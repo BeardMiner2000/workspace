@@ -255,7 +255,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Actions
     
     @objc func selectApp(_ sender: NSMenuItem) {
-        selectedAppBundleID = sender.representedObject as? String
+        if let newBundleID = sender.representedObject as? String {
+            // Toggle: if clicking the same app, deselect it
+            if selectedAppBundleID == newBundleID {
+                selectedAppBundleID = nil
+            } else {
+                selectedAppBundleID = newBundleID
+            }
+        }
+        
+        print("Selected app: \(selectedAppBundleID ?? "none")")
+        
         // Rebuild menu to show checkmark and enable button
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             self.buildAndShowMenu()
@@ -263,15 +273,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func enterStillMode() {
-        guard let bundleID = selectedAppBundleID else { return }
-        
-        // Find the running app with this bundle ID
-        guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleID }) else {
+        guard let bundleID = selectedAppBundleID else {
+            print("ERROR: No app selected")
             return
         }
         
+        print("Entering Still Mode for: \(bundleID)")
+        
+        // Find the running app with this bundle ID
+        let allApps = NSWorkspace.shared.runningApplications
+        print("Running apps: \(allApps.map { $0.bundleIdentifier ?? "nil" })")
+        
+        guard let app = allApps.first(where: { $0.bundleIdentifier == bundleID }) else {
+            print("ERROR: App not found for bundle ID: \(bundleID)")
+            return
+        }
+        
+        print("Found app: \(app.localizedName ?? "Unknown")")
+        
         focusManager.enter(focusOn: app) { [weak self] in
+            print("Still Mode activated")
             self?.updateIcon(active: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self?.buildAndShowMenu()
+            }
         }
     }
     
