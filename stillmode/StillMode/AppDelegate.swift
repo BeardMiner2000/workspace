@@ -191,7 +191,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     item.representedObject = app.bundleIdentifier  // Store bundle ID, not app object
                     
                     // Add app icon if available (safely)
-                    if let icon = app.icon, let img = icon.copy() as? NSImage {
+                    if let icon = app.icon, icon.copy() as? NSImage != nil {
                         let resized = NSImage(size: NSSize(width: 16, height: 16))
                         resized.lockFocus()
                         icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
@@ -264,8 +264,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        print("Selected app: \(selectedAppBundleID ?? "none")")
-        
         // Update menu in-place WITHOUT closing it
         if let menu = statusItem?.menu {
             let hasSelection = selectedAppBundleID != nil
@@ -290,26 +288,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func enterStillMode() {
-        guard let bundleID = selectedAppBundleID else {
-            print("ERROR: No app selected")
-            return
-        }
-        
-        print("Entering Still Mode for: \(bundleID)")
+        guard let bundleID = selectedAppBundleID else { return }
         
         // Find the running app with this bundle ID
-        let allApps = NSWorkspace.shared.runningApplications
-        print("Running apps: \(allApps.map { $0.bundleIdentifier ?? "nil" })")
-        
-        guard let app = allApps.first(where: { $0.bundleIdentifier == bundleID }) else {
-            print("ERROR: App not found for bundle ID: \(bundleID)")
+        guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleID }) else {
             return
         }
         
-        print("Found app: \(app.localizedName ?? "Unknown")")
-        
         focusManager.enter(focusOn: app) { [weak self] in
-            print("Still Mode activated")
             self?.updateIcon(active: true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self?.buildAndShowMenu()
