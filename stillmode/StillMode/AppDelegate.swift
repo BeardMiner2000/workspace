@@ -74,7 +74,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     var statusItem: NSStatusItem?
     var focusManager = FocusManager()
-    var selectedApp: NSRunningApplication?
+    var selectedAppBundleID: String?  // Store bundle ID instead of app object
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide from Dock
@@ -154,7 +154,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     let name = app.localizedName ?? app.bundleIdentifier ?? "Unknown"
                     let item = NSMenuItem(title: "  \(name)", action: #selector(selectApp(_:)), keyEquivalent: "")
                     item.target = self
-                    item.representedObject = app
+                    item.representedObject = app.bundleIdentifier  // Store bundle ID, not app object
                     
                     // Add app icon if available (safely)
                     if let icon = app.icon, let img = icon.copy() as? NSImage {
@@ -165,8 +165,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         item.image = resized
                     }
                     
-                    // Checkmark if selected
-                    if let selected = selectedApp, selected == app {
+                    // Checkmark if selected (compare by bundle ID)
+                    if let selectedID = selectedAppBundleID, selectedID == app.bundleIdentifier {
                         item.state = .on
                     }
                     
@@ -175,16 +175,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 
                 menu.addItem(.separator())
                 
+                let hasSelection = selectedAppBundleID != nil
                 let enterItem = NSMenuItem(
-                    title: selectedApp != nil ? "Ready to be Still 🧘" : "Ready to be Still 🧘",
-                    action: selectedApp != nil ? #selector(enterStillMode) : nil,
-                    keyEquivalent: selectedApp != nil ? "\r" : ""
+                    title: "Ready to be Still 🧘",
+                    action: hasSelection ? #selector(enterStillMode) : nil,
+                    keyEquivalent: hasSelection ? "\r" : ""
                 )
                 enterItem.target = self
-                enterItem.isEnabled = selectedApp != nil
+                enterItem.isEnabled = hasSelection
                 
-                // Make button bold and green when enabled
-                if selectedApp != nil {
+                // Make button bold when enabled
+                if hasSelection {
                     let attrs: [NSAttributedString.Key: Any] = [
                         .font: NSFont.boldSystemFont(ofSize: 13)
                     ]
@@ -220,12 +221,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Actions
     
     @objc func selectApp(_ sender: NSMenuItem) {
-        selectedApp = sender.representedObject as? NSRunningApplication
-        // Don't rebuild; let the menu close naturally. User clicks again to confirm.
+        selectedAppBundleID = sender.representedObject as? String
+        // Rebuild menu to show checkmark and enable button
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.buildAndShowMenu()
+        }
     }
     
     @objc func enterStillMode() {
-        guard let app = selectedApp else { return }
+        guard let bundleID = selectedAppBundleID else { return }
+        
+        // Find the running app with this bundle ID
+        guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleID }) else {
+            return
+        }
+        
         focusManager.enter(focusOn: app) { [weak self] in
             self?.updateIcon(active: true)
         }
@@ -234,7 +244,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func exitStillMode() {
         focusManager.exit { [weak self] in
             self?.updateIcon(active: false)
-            self?.selectedApp = nil
+            self?.selectedAppBundleID = nil
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self?.buildAndShowMenu()
             }
