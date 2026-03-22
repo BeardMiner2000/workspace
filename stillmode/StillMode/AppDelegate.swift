@@ -266,9 +266,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         print("Selected app: \(selectedAppBundleID ?? "none")")
         
-        // Rebuild menu to show checkmark and enable button
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            self.buildAndShowMenu()
+        // Update menu in-place WITHOUT closing it
+        if let menu = statusItem?.menu {
+            let hasSelection = selectedAppBundleID != nil
+            
+            // Update all app items' checkmarks
+            for item in menu.items {
+                if let bundleID = item.representedObject as? String {
+                    item.state = (bundleID == selectedAppBundleID) ? .on : .off
+                }
+            }
+            
+            // Find and update the "Ready to be Still" button
+            if let enterItem = menu.items.first(where: { $0.title.contains("Ready to be Still") }) {
+                enterItem.isEnabled = hasSelection
+                if hasSelection {
+                    enterItem.action = #selector(enterStillMode)
+                } else {
+                    enterItem.action = nil
+                }
+            }
         }
     }
     
