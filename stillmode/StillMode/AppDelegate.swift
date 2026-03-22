@@ -75,6 +75,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var focusManager = FocusManager()
     var selectedAppBundleID: String?  // Store bundle ID instead of app object
+    var globalEventMonitor: Any?  // Keyboard monitor for Escape key
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide from Dock
@@ -82,6 +83,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Setup menubar icon
         setupStatusItem()
+        
+        // Setup global keyboard monitoring for Escape key
+        setupGlobalKeyboardMonitor()
+    }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        if let monitor = globalEventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        
+        // Exit still mode if active
+        if focusManager.isActive {
+            focusManager.exit { }
+        }
+    }
+    
+    private func setupGlobalKeyboardMonitor() {
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // Escape key = 53
+            if event.keyCode == 53 && self?.focusManager.isActive == true {
+                self?.exitStillMode()
+            }
+        }
     }
     
     // MARK: - Status Item Setup
@@ -132,9 +156,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             menu.addItem(.separator())
             
-            let exitItem = NSMenuItem(title: "Exit Still Mode", action: #selector(exitStillMode), keyEquivalent: "\u{1B}")  // Escape key
+            // Exit button (prominent)
+            let exitItem = NSMenuItem(title: "❌ Exit Still Mode", action: #selector(exitStillMode), keyEquivalent: "e")
             exitItem.target = self
+            let exitAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.boldSystemFont(ofSize: 13)
+            ]
+            exitItem.attributedTitle = NSAttributedString(string: "❌ Exit Still Mode", attributes: exitAttrs)
             menu.addItem(exitItem)
+            
+            // Also add Escape hint
+            let escapeHint = NSMenuItem(title: "(or press ESC)", action: nil, keyEquivalent: "")
+            escapeHint.isEnabled = false
+            menu.addItem(escapeHint)
             
         } else {
             // IDLE STATE
