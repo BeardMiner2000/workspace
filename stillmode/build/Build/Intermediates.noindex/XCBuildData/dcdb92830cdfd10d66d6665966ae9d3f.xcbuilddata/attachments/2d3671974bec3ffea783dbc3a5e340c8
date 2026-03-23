@@ -1,0 +1,49 @@
+{
+  "" : {
+    "diagnostics" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillMode-primary.dia",
+    "emit-module-dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillMode-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillMode-primary-emit-module.dia",
+    "pch" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillMode-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillMode-primary.swiftdeps"
+  },
+  "/Users/jl/.openclaw/workspace/stillmode/StillMode/AppDelegate.swift" : {
+    "const-values" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate.swiftconstvalues",
+    "dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate.d",
+    "diagnostics" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate.dia",
+    "index-unit-output-path" : "/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate.o",
+    "llvm-bc" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate.bc",
+    "object" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate.o",
+    "swift-dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate.swiftdeps",
+    "swiftmodule" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/AppDelegate~partial.swiftmodule"
+  },
+  "/Users/jl/.openclaw/workspace/stillmode/StillMode/FocusManager.swift" : {
+    "const-values" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager.swiftconstvalues",
+    "dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager.d",
+    "diagnostics" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager.dia",
+    "index-unit-output-path" : "/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager.o",
+    "llvm-bc" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager.bc",
+    "object" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager.o",
+    "swift-dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager.swiftdeps",
+    "swiftmodule" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/FocusManager~partial.swiftmodule"
+  },
+  "/Users/jl/.openclaw/workspace/stillmode/StillMode/StillModeApp.swift" : {
+    "const-values" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp.swiftconstvalues",
+    "dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp.d",
+    "diagnostics" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp.dia",
+    "index-unit-output-path" : "/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp.o",
+    "llvm-bc" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp.bc",
+    "object" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp.o",
+    "swift-dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp.swiftdeps",
+    "swiftmodule" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/StillModeApp~partial.swiftmodule"
+  },
+  "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/jl/.openclaw/workspace/stillmode/build/Build/Intermediates.noindex/StillMode.build/Debug/StillMode.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

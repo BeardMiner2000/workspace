@@ -2,11 +2,12 @@
 
 ## Active Projects
 
-### Still Mode (macOS) ✅ PRODUCTION READY
-- **Status:** v1.0 complete, all features tested, ready to ship
+### Still Mode (macOS) 🚀 TESTING PHASE
+- **Status:** v1.0 UI bugs fixed (popup window, multi-select, state persistence). Ready for final user testing.
 - **Location:** `workspace/stillmode/`
-- **Build:** `/Users/jl/Library/Developer/Xcode/DerivedData/.../StillMode.app`
-- **Next steps:** Code signing, notarization, Gumroad setup
+- **Build:** `/Users/jl/Library/Developer/Xcode/DerivedData/StillMode-.../Build/Products/Release/StillMode.app`
+- **Latest fixes:** Popup window stays open, checkboxes persist, multi-select works
+- **Next steps:** JL final testing → Code signing → Notarization → Gumroad setup
 
 ### Still Mode (iOS) 📋 PROTOTYPE READY
 - **Status:** MVP code complete, ready for Xcode integration

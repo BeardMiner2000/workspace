@@ -1,8 +1,7 @@
 import AppKit
-import SwiftUI
 import Security
 
-// MARK: - License Manager (Simplified)
+// MARK: - License Manager
 
 class LicenseManager {
     static let shared = LicenseManager()
@@ -36,7 +35,6 @@ class LicenseManager {
     
     func activateLicense(key: String) -> Bool {
         guard isValidFormat(key) else { return false }
-        
         guard let data = key.data(using: .utf8) else { return false }
         
         let deleteQuery: [String: Any] = [
@@ -68,47 +66,37 @@ class LicenseManager {
     }
 }
 
+// MARK: - Popup Window Delegate
+
+class PopupWindowDelegate: NSObject, NSWindowDelegate {
+    var allowClose: Bool = false
+    
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        // Only allow close if explicitly permitted (via closePopup or explicit close)
+        return allowClose
+    }
+}
+
 // MARK: - App Delegate
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    
     var statusItem: NSStatusItem?
     var focusManager = FocusManager()
-    var selectedAppBundleID: String?  // Store bundle ID instead of app object
-    var globalEventMonitor: Any?  // Keyboard monitor for Escape key
+    var selectedApps: Set<String> = []
+    var popupWindow: NSWindow?
+    var popupWindowDelegate: PopupWindowDelegate?
+    var checkboxToBundleID: [NSButton: String] = [:]
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hide from Dock
         NSApp.setActivationPolicy(.accessory)
-        
-        // Setup menubar icon
         setupStatusItem()
-        
-        // Setup global keyboard monitoring for Escape key
-        setupGlobalKeyboardMonitor()
     }
     
     func applicationWillTerminate(_ notification: Notification) {
-        if let monitor = globalEventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
-        
-        // Exit still mode if active
         if focusManager.isActive {
             focusManager.exit { }
         }
     }
-    
-    private func setupGlobalKeyboardMonitor() {
-        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            // Escape key = 53
-            if event.keyCode == 53 && self?.focusManager.isActive == true {
-                self?.exitStillMode()
-            }
-        }
-    }
-    
-    // MARK: - Status Item Setup
     
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -118,7 +106,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.font = NSFont.systemFont(ofSize: 16)
             button.action = #selector(statusItemClicked)
             button.target = self
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
     }
     
@@ -128,243 +115,240 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    // MARK: - Menu
-    
     @objc func statusItemClicked() {
-        buildAndShowMenu()
+        if focusManager.isActive {
+            showExitPopup()
+        } else {
+            showSelectionPopup()
+        }
     }
     
-    private func buildAndShowMenu() {
-        let menu = NSMenu()
-        menu.autoenablesItems = false
+    private func showSelectionPopup() {
+        let width: CGFloat = 320
+        let height: CGFloat = 500
+        
+        guard let statusBarButton = statusItem?.button else { return }
+        let buttonFrame = statusBarButton.window?.frame ?? NSRect.zero
+        let x = buttonFrame.midX - width / 2
+        let y = buttonFrame.minY - height - 10
+        
+        let popupRect = NSRect(x: x, y: y, width: width, height: height)
+        
+        let window = NSWindow(
+            contentRect: popupRect,
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "Still Mode"
+        window.level = .floating
+        window.isMovableByWindowBackground = true
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        
+        // Set delegate to prevent accidental window closure
+        let windowDelegate = PopupWindowDelegate()
+        window.delegate = windowDelegate
+        self.popupWindowDelegate = windowDelegate
+        
+        let contentView = NSView(frame: window.contentView?.bounds ?? NSRect.zero)
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor(calibratedWhite: 0.95, alpha: 1).cgColor
+        
+        var yPosition: CGFloat = height - 40
         
         // Title
-        let titleItem = NSMenuItem(title: "Still Mode", action: nil, keyEquivalent: "")
-        titleItem.isEnabled = false
-        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.boldSystemFont(ofSize: 13)]
-        titleItem.attributedTitle = NSAttributedString(string: "Still Mode", attributes: attrs)
-        menu.addItem(titleItem)
-        menu.addItem(.separator())
+        let titleLabel = NSTextField(frame: NSRect(x: 16, y: yPosition, width: width - 32, height: 30))
+        titleLabel.stringValue = "Select apps to focus on:"
+        titleLabel.isBezeled = false
+        titleLabel.drawsBackground = false
+        titleLabel.isEditable = false
+        titleLabel.font = NSFont.boldSystemFont(ofSize: 13)
+        contentView.addSubview(titleLabel)
+        yPosition -= 40
         
-        if focusManager.isActive {
-            // ACTIVE STATE
-            if let focusedApp = focusManager.focusedApp {
-                let status = NSMenuItem(title: "Focusing: \(focusedApp.localizedName ?? "Unknown")", action: nil, keyEquivalent: "")
-                status.isEnabled = false
-                menu.addItem(status)
-            }
+        // Get running apps
+        let apps = focusManager.runningUserApps()
+        checkboxToBundleID.removeAll()
+        
+        // Scroll view
+        let scrollView = NSScrollView(frame: NSRect(x: 16, y: 80, width: width - 32, height: yPosition - 20))
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        
+        let clipView = NSClipView()
+        scrollView.contentView = clipView
+        
+        let documentView = NSView(frame: NSRect(x: 0, y: 0, width: width - 32, height: CGFloat(apps.count * 30)))
+        
+        // Add checkboxes
+        for (index, app) in apps.enumerated() {
+            let bundleID = app.bundleIdentifier ?? "unknown"
+            let appName = app.localizedName ?? bundleID
             
-            menu.addItem(.separator())
+            let checkboxFrame = NSRect(x: 0, y: CGFloat(apps.count - index - 1) * 30, width: width - 32, height: 28)
+            let checkbox = NSButton(frame: checkboxFrame)
+            checkbox.setButtonType(.switch)
+            checkbox.title = appName
+            checkbox.target = self
+            checkbox.action = #selector(appCheckboxChanged(_:))
+            checkbox.state = selectedApps.contains(bundleID) ? .on : .off
             
-            // Exit button (prominent)
-            let exitItem = NSMenuItem(title: "❌ Exit Still Mode", action: #selector(exitStillMode), keyEquivalent: "e")
-            exitItem.target = self
-            let exitAttrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.boldSystemFont(ofSize: 13)
-            ]
-            exitItem.attributedTitle = NSAttributedString(string: "❌ Exit Still Mode", attributes: exitAttrs)
-            menu.addItem(exitItem)
-            
-            // Also add Escape hint
-            let escapeHint = NSMenuItem(title: "(or press ESC)", action: nil, keyEquivalent: "")
-            escapeHint.isEnabled = false
-            menu.addItem(escapeHint)
-            
-        } else {
-            // IDLE STATE
-            let apps = focusManager.runningUserApps()
-            let isPremium = LicenseManager.shared.isPremium
-            
-            if apps.isEmpty {
-                let noApps = NSMenuItem(title: "No apps running", action: nil, keyEquivalent: "")
-                noApps.isEnabled = false
-                menu.addItem(noApps)
-            } else {
-                let chooseLabel = NSMenuItem(title: isPremium ? "Select app(s) to focus on:" : "Select app to focus on:", action: nil, keyEquivalent: "")
-                chooseLabel.isEnabled = false
-                menu.addItem(chooseLabel)
-                
-                for app in apps {
-                    let name = app.localizedName ?? app.bundleIdentifier ?? "Unknown"
-                    let item = NSMenuItem(title: "  \(name)", action: #selector(selectApp(_:)), keyEquivalent: "")
-                    item.target = self
-                    item.representedObject = app.bundleIdentifier  // Store bundle ID, not app object
-                    
-                    // Add app icon if available (safely)
-                    if let icon = app.icon, icon.copy() as? NSImage != nil {
-                        let resized = NSImage(size: NSSize(width: 16, height: 16))
-                        resized.lockFocus()
-                        icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
-                        resized.unlockFocus()
-                        item.image = resized
-                    }
-                    
-                    // Checkmark if selected (compare by bundle ID)
-                    if let selectedID = selectedAppBundleID, selectedID == app.bundleIdentifier {
-                        item.state = .on
-                    }
-                    
-                    menu.addItem(item)
-                }
-                
-                menu.addItem(.separator())
-                
-                let hasSelection = selectedAppBundleID != nil
-                let enterItem = NSMenuItem(
-                    title: "Ready to be Still 🧘",
-                    action: hasSelection ? #selector(enterStillMode) : nil,
-                    keyEquivalent: hasSelection ? "\r" : ""
-                )
-                enterItem.target = self
-                enterItem.isEnabled = hasSelection
-                
-                // Make button bold when enabled
-                if hasSelection {
-                    let attrs: [NSAttributedString.Key: Any] = [
-                        .font: NSFont.boldSystemFont(ofSize: 13)
-                    ]
-                    enterItem.attributedTitle = NSAttributedString(string: "Ready to be Still 🧘", attributes: attrs)
-                }
-                
-                menu.addItem(enterItem)
-            }
+            documentView.addSubview(checkbox)
+            checkboxToBundleID[checkbox] = bundleID
         }
         
-        menu.addItem(.separator())
+        clipView.documentView = documentView
+        contentView.addSubview(scrollView)
         
-        // Show license info / upgrade button
-        if !LicenseManager.shared.isPremium {
-            let upgradeItem = NSMenuItem(title: "Upgrade to Premium", action: #selector(showUpgradePrompt), keyEquivalent: "")
-            upgradeItem.target = self
-            menu.addItem(upgradeItem)
-            menu.addItem(.separator())
-        } else {
-            let licenseItem = NSMenuItem(title: "✓ Premium Active", action: nil, keyEquivalent: "")
-            licenseItem.isEnabled = false
-            menu.addItem(licenseItem)
-            menu.addItem(.separator())
-        }
+        // Be Still button
+        let beStillButton = NSButton(frame: NSRect(x: 16, y: 40, width: width - 32, height: 32))
+        beStillButton.title = "🧘 Be Still"
+        beStillButton.bezelStyle = .rounded
+        beStillButton.target = self
+        beStillButton.action = #selector(enterStillMode)
+        beStillButton.isEnabled = !selectedApps.isEmpty
+        contentView.addSubview(beStillButton)
         
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        menu.addItem(quitItem)
+        // Cancel button
+        let cancelButton = NSButton(frame: NSRect(x: 16, y: 8, width: width - 32, height: 24))
+        cancelButton.title = "Cancel"
+        cancelButton.bezelStyle = .rounded
+        cancelButton.target = self
+        cancelButton.action = #selector(closePopup)
+        contentView.addSubview(cancelButton)
         
-        statusItem?.menu = menu
-        statusItem?.button?.performClick(nil)
+        window.contentView = contentView
+        self.popupWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
-    // MARK: - Actions
+    private func showExitPopup() {
+        let width: CGFloat = 300
+        let height: CGFloat = 150
+        
+        guard let statusBarButton = statusItem?.button else { return }
+        let buttonFrame = statusBarButton.window?.frame ?? NSRect.zero
+        let x = buttonFrame.midX - width / 2
+        let y = buttonFrame.minY - height - 10
+        
+        let popupRect = NSRect(x: x, y: y, width: width, height: height)
+        
+        let window = NSWindow(
+            contentRect: popupRect,
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "Still Mode Active"
+        window.level = .floating
+        window.isMovableByWindowBackground = true
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        
+        // Set delegate to prevent accidental window closure
+        let windowDelegate = PopupWindowDelegate()
+        window.delegate = windowDelegate
+        self.popupWindowDelegate = windowDelegate
+        
+        let contentView = NSView(frame: window.contentView?.bounds ?? NSRect.zero)
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor(calibratedWhite: 0.95, alpha: 1).cgColor
+        
+        // Status label
+        let statusLabel = NSTextField(frame: NSRect(x: 16, y: 80, width: width - 32, height: 40))
+        statusLabel.stringValue = "Still Mode is active.\nClick below to exit."
+        statusLabel.isBezeled = false
+        statusLabel.drawsBackground = false
+        statusLabel.isEditable = false
+        statusLabel.alignment = .center
+        contentView.addSubview(statusLabel)
+        
+        // Exit button
+        let exitButton = NSButton(frame: NSRect(x: 16, y: 40, width: width - 32, height: 32))
+        exitButton.title = "❌ Exit Still Mode"
+        exitButton.bezelStyle = .rounded
+        exitButton.target = self
+        exitButton.action = #selector(exitStillMode)
+        contentView.addSubview(exitButton)
+        
+        // Cancel button
+        let cancelButton = NSButton(frame: NSRect(x: 16, y: 8, width: width - 32, height: 24))
+        cancelButton.title = "Cancel"
+        cancelButton.bezelStyle = .rounded
+        cancelButton.target = self
+        cancelButton.action = #selector(closePopup)
+        contentView.addSubview(cancelButton)
+        
+        window.contentView = contentView
+        self.popupWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
     
-    @objc func selectApp(_ sender: NSMenuItem) {
-        if let newBundleID = sender.representedObject as? String {
-            // Toggle: if clicking the same app, deselect it
-            if selectedAppBundleID == newBundleID {
-                selectedAppBundleID = nil
-            } else {
-                selectedAppBundleID = newBundleID
-            }
+    @objc func appCheckboxChanged(_ sender: NSButton) {
+        guard let bundleID = checkboxToBundleID[sender] else { return }
+        
+        if sender.state == .on {
+            selectedApps.insert(bundleID)
+        } else {
+            selectedApps.remove(bundleID)
         }
         
-        // Update menu in-place WITHOUT closing it
-        if let menu = statusItem?.menu {
-            let hasSelection = selectedAppBundleID != nil
-            
-            // Update all app items' checkmarks
-            for item in menu.items {
-                if let bundleID = item.representedObject as? String {
-                    item.state = (bundleID == selectedAppBundleID) ? .on : .off
-                }
+        // Update the "Be Still" button state
+        updateBeStillButtonState()
+    }
+    
+    private func updateBeStillButtonState() {
+        // Find and update the "Be Still" button in the current popup window
+        guard let window = popupWindow,
+              let contentView = window.contentView else { return }
+        
+        if let beStillButton = contentView.subviews.first(where: { view in
+            if let btn = view as? NSButton, btn.title == "🧘 Be Still" {
+                return true
             }
-            
-            // Find and update the "Ready to be Still" button
-            if let enterItem = menu.items.first(where: { $0.title.contains("Ready to be Still") }) {
-                enterItem.isEnabled = hasSelection
-                if hasSelection {
-                    enterItem.action = #selector(enterStillMode)
-                } else {
-                    enterItem.action = nil
-                }
-            }
+            return false
+        }) as? NSButton {
+            beStillButton.isEnabled = !selectedApps.isEmpty
         }
     }
     
     @objc func enterStillMode() {
-        guard let bundleID = selectedAppBundleID else { return }
+        guard !selectedApps.isEmpty else { return }
         
-        // Find the running app with this bundle ID
-        guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleID }) else {
-            return
+        let selectedRunningApps = NSWorkspace.shared.runningApplications.filter { app in
+            selectedApps.contains(app.bundleIdentifier ?? "")
         }
         
-        focusManager.enter(focusOn: app) { [weak self] in
+        guard !selectedRunningApps.isEmpty else { return }
+        
+        closePopup()
+        
+        focusManager.enter(focusOn: selectedRunningApps) { [weak self] in
             self?.updateIcon(active: true)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self?.buildAndShowMenu()
-            }
         }
     }
     
     @objc func exitStillMode() {
         focusManager.exit { [weak self] in
             self?.updateIcon(active: false)
-            self?.selectedAppBundleID = nil
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self?.buildAndShowMenu()
-            }
+            self?.selectedApps.removeAll()
+            self?.closePopup()
         }
     }
     
-    @objc func showUpgradePrompt() {
-        let alert = NSAlert()
-        alert.messageText = "Upgrade to Still Mode Premium"
-        alert.informativeText = "Premium unlocks:\n• Focus on multiple apps\n• Focus timers (15m, 30m, 1h)\n• Session history & stats\n\nOne-time purchase: $2.99"
-        alert.addButton(withTitle: "Learn More")
-        alert.addButton(withTitle: "Enter License Key")
-        alert.addButton(withTitle: "Cancel")
-        
-        let response = alert.runModal()
-        
-        switch response {
-        case .alertFirstButtonReturn:
-            // Open website
-            NSWorkspace.shared.open(URL(string: "https://stillmode.app")!)
-        case .alertSecondButtonReturn:
-            // Show license entry dialog
-            showLicenseEntryDialog()
-        default:
-            break
-        }
-    }
-    
-    private func showLicenseEntryDialog() {
-        let alert = NSAlert()
-        alert.messageText = "Enter License Key"
-        alert.informativeText = "Paste your license key (format: STILLMODE-XXXX-XXXX-XXXX)"
-        
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-        textField.placeholderString = "STILLMODE-XXXX-XXXX-XXXX"
-        alert.accessoryView = textField
-        
-        alert.addButton(withTitle: "Activate")
-        alert.addButton(withTitle: "Cancel")
-        
-        let response = alert.runModal()
-        
-        if response == .alertFirstButtonReturn, !textField.stringValue.isEmpty {
-            if LicenseManager.shared.activateLicense(key: textField.stringValue) {
-                NSAlert(title: "Success", message: "License activated! Restart the app to see premium features.").runModal()
-                buildAndShowMenu()
-            } else {
-                NSAlert(title: "Invalid License", message: "The license key format is incorrect or invalid.").runModal()
+    @objc func closePopup() {
+        if let window = popupWindow {
+            // Temporarily allow closing
+            if let delegate = window.delegate as? PopupWindowDelegate {
+                delegate.allowClose = true
             }
+            window.close()
+            popupWindow = nil
         }
-    }
-}
-
-extension NSAlert {
-    convenience init(title: String, message: String) {
-        self.init()
-        self.messageText = title
-        self.informativeText = message
-        self.addButton(withTitle: "OK")
     }
 }

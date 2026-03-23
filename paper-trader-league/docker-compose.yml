@@ -80,6 +80,17 @@ services:
       timeout: 5s
       retries: 10
 
+  data_ingest_s3:
+    <<: *python-service
+    container_name: ptl-data-ingest-s3
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && python src/main.py"
+    volumes:
+      - ./services/data_ingest_s3:/app
+    environment:
+      DEFAULT_SEASON_ID: "season-003"
+      AUTO_BOOTSTRAP_SEASON: "true"
+      DEFAULT_STARTING_BTC: "0.05"
+
 volumes:
   timescaledb_data:
   grafana_data:

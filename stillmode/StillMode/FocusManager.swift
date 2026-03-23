@@ -7,10 +7,9 @@ class FocusManager: NSObject {
     // MARK: - State
     
     private(set) var isActive: Bool = false
-    private(set) var focusedApp: NSRunningApplication?
+    private(set) var focusedApps: [NSRunningApplication]?
     private var hiddenApps: [NSRunningApplication] = []
     private var appActivationObserver: NSObjectProtocol?
-    private var overlayWindows: [NSWindow] = []
     
     // MARK: - Initialization
     
@@ -20,21 +19,23 @@ class FocusManager: NSObject {
     
     // MARK: - Public API
     
-    func enter(focusOn app: NSRunningApplication, completion: @escaping () -> Void) {
+    func enter(focusOn apps: [NSRunningApplication], completion: @escaping () -> Void) {
         guard !isActive else { return }
+        guard !apps.isEmpty else { return }
         
         isActive = true
-        focusedApp = app
+        focusedApps = apps
         hiddenApps = []
         
         // Snapshot all running apps
         let allApps = NSWorkspace.shared.runningApplications
         
-        // Hide all except the focused app
+        // Hide all except the focused apps
         for runningApp in allApps {
-            // Skip system apps, the focused app, and already-hidden apps
+            let isFocused = apps.contains { $0.bundleIdentifier == runningApp.bundleIdentifier }
+            
             if runningApp.activationPolicy == .regular &&
-               runningApp.bundleIdentifier != app.bundleIdentifier &&
+               !isFocused &&
                !runningApp.isHidden {
                 if runningApp.hide() {
                     hiddenApps.append(runningApp)
@@ -42,11 +43,10 @@ class FocusManager: NSObject {
             }
         }
         
-        // Bring focused app to front
-        app.activate(options: [.activateIgnoringOtherApps])
-        
-        // Show blackout overlay on all other screens
-        showOverlay()
+        // Bring focused apps to front (in order)
+        for app in apps {
+            app.activate(options: [.activateIgnoringOtherApps])
+        }
         
         // Enable Do Not Disturb
         setDoNotDisturb(enabled: true)
@@ -68,15 +68,12 @@ class FocusManager: NSObject {
         // Stop monitoring
         stopMonitoringActivations()
         
-        // Hide overlay
-        hideOverlay()
-        
         // Unhide all tracked apps
         for app in hiddenApps {
             app.unhide()
         }
         hiddenApps = []
-        focusedApp = nil
+        focusedApps = nil
         
         // Disable Do Not Disturb
         setDoNotDisturb(enabled: false)
@@ -90,7 +87,7 @@ class FocusManager: NSObject {
     // MARK: - App Monitoring
     
     private func startMonitoringActivations() {
-        // Monitor when apps try to activate via NSWorkspace's notification center
+        // Monitor when apps try to activate
         appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -99,10 +96,13 @@ class FocusManager: NSObject {
             guard let self = self, self.isActive else { return }
             
             if let activatedApp = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
-                // If a non-focused app tries to activate, immediately reactivate the focused app
-                if activatedApp.bundleIdentifier != self.focusedApp?.bundleIdentifier {
+                // If a non-focused app tries to activate, immediately reactivate the focused apps
+                let isFocused = self.focusedApps?.contains { $0.bundleIdentifier == activatedApp.bundleIdentifier } ?? false
+                
+                if !isFocused {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        self.focusedApp?.activate(options: [.activateIgnoringOtherApps])
+                        // Reactivate the first focused app
+                        self.focusedApps?.first?.activate(options: [.activateIgnoringOtherApps])
                     }
                 }
             }
@@ -154,39 +154,6 @@ class FocusManager: NSObject {
     
     private func playExitTone() {
         AudioServicesPlaySystemSound(1006)  // Pop
-    }
-    
-    // MARK: - Overlay Management
-    
-    private func showOverlay() {
-        // Create overlay window on each screen
-        for screen in NSScreen.screens {
-            let overlay = NSWindow(
-                contentRect: screen.frame,
-                styleMask: .borderless,
-                backing: .buffered,
-                defer: false,
-                screen: screen
-            )
-            
-            // Set window properties
-            overlay.backgroundColor = NSColor.black.withAlphaComponent(0.85)
-            overlay.isOpaque = true
-            overlay.level = .screenSaver  // Below notifications, above normal windows
-            overlay.ignoresMouseEvents = true
-            overlay.hidesOnDeactivate = false
-            
-            // Make it visible
-            overlay.orderFront(nil)
-            overlayWindows.append(overlay)
-        }
-    }
-    
-    private func hideOverlay() {
-        for overlay in overlayWindows {
-            overlay.close()
-        }
-        overlayWindows = []
     }
     
     // MARK: - Utility
