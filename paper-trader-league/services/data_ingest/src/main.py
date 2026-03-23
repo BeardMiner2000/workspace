@@ -43,6 +43,16 @@ ZERO = Decimal("0")
 SAT = Decimal("0.00000001")
 
 
+CORE_SYMBOL_DEFAULTS = {
+    "BTCUSDT": {"price": 65000.0, "drift": 0.0004, "amp": 0.006},
+    "ETHUSDT": {"price": 3400.0, "drift": 0.0008, "amp": 0.011},
+    "SOLUSDT": {"price": 140.0, "drift": 0.0012, "amp": 0.02},
+    "DOGEUSDT": {"price": 0.15, "drift": 0.0015, "amp": 0.03},
+}
+GENERIC_SYMBOL_TEMPLATE = {"price": 1.0, "drift": 0.0008, "amp": 0.015}
+DEFAULT_BEST_QUOTE_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT"]
+
+
 @dataclass
 class BotState:
     bot_id: str
@@ -67,18 +77,22 @@ class LeagueRuntime:
         self.rand = random.Random(self.seed)
         self.tick = 0
         self.loop_start_ts = time.time()
-        self.symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT"]
-        self.state = {
-            "BTCUSDT": {"price": 65000.0, "drift": 0.0004, "amp": 0.006},
-            "ETHUSDT": {"price": 3400.0, "drift": 0.0008, "amp": 0.011},
-            "SOLUSDT": {"price": 140.0, "drift": 0.0012, "amp": 0.02},
-            "DOGEUSDT": {"price": 0.15, "drift": 0.0015, "amp": 0.03},
-        }
+        core_symbols = list(CORE_SYMBOL_DEFAULTS.keys())
+        if self.source == "coinbase":
+            dynamic_symbols = sorted(SYMBOL_MAP.keys())
+            symbols = dynamic_symbols or core_symbols
+        else:
+            symbols = core_symbols
+        self.symbols = list(symbols)
+        self.best_quote_symbols = self._resolve_best_quote_symbols(self.symbols)
+        self.state = {symbol: self._initial_symbol_meta(symbol) for symbol in self.symbols}
         self.history = {symbol: deque(maxlen=self.max_history) for symbol in self.symbols}
         self.best_quotes: dict[str, dict[str, float]] = {}
         self.candle_cache: dict[tuple[str, str], dict[str, Any]] = {}
         self.spread_history = {symbol: deque(maxlen=240) for symbol in self.symbols}
         self.obi_history = {symbol: deque(maxlen=6) for symbol in self.symbols}
+        if self.source == "coinbase":
+            self._seed_initial_coinbase_prices()
         self.bot_positions: dict[str, dict[str, dict[str, Any]]] = {}
         self.bot_cooldowns: dict[str, float] = {}
         self.symbol_cooldowns: dict[str, float] = {}
@@ -125,18 +139,42 @@ class LeagueRuntime:
                 row = cur.fetchone()
                 return bool(row["season_exists"])
 
-    def maybe_bootstrap(self) -> None:
-        if not self.bootstrap:
+    def _initial_symbol_meta(self, symbol: str) -> dict[str, float]:
+        template = CORE_SYMBOL_DEFAULTS.get(symbol, GENERIC_SYMBOL_TEMPLATE)
+        return {"price": template["price"], "drift": template["drift"], "amp": template["amp"]}
+
+    def _resolve_best_quote_symbols(self, available: list[str]) -> list[str]:
+        if not available:
+            return []
+        raw = os.getenv("BEST_QUOTE_SYMBOLS")
+        if raw:
+            requested = [symbol.strip().upper() for symbol in raw.split(",") if symbol.strip()]
+        else:
+            requested = DEFAULT_BEST_QUOTE_SYMBOLS
+        filtered = [symbol for symbol in requested if symbol in available]
+        if filtered:
+            return filtered
+        fallback = [symbol for symbol in DEFAULT_BEST_QUOTE_SYMBOLS if symbol in available]
+        if fallback:
+            return fallback
+        limit = min(len(available), 10)
+        return available[:limit]
+
+    def _seed_initial_coinbase_prices(self) -> None:
+        prices = fetch_coinbase_prices_safe(self.symbols, log_fn=self.log)
+        if not prices:
+            self.log("initial Coinbase price seed failed; continuing with defaults")
             return
-        if self.season_exists():
-            self.log(
-                f"season {self.season_id} already exists; skipping bootstrap to preserve prior state"
-            )
-            return
-        payload = {"season_id": self.season_id, "starting_btc": self.starting_btc}
-        response = requests.post(f"{self.trade_engine_url}/season/bootstrap", json=payload, timeout=10)
-        response.raise_for_status()
-        self.log(f"bootstrapped season {self.season_id}")
+        seeded = 0
+        for symbol in self.symbols:
+            price = prices.get(symbol)
+            if price is None:
+                continue
+            self.state[symbol]["price"] = price
+            self.history[symbol].append(Decimal(str(price)))
+            seeded += 1
+        if seeded:
+            self.log(f"seeded initial Coinbase prices for {seeded} symbols")
 
     # ── market + math helpers ─────────────────────────────────────────────
     def current_marks(self) -> dict[str, Decimal]:
@@ -220,7 +258,8 @@ class LeagueRuntime:
         return 100.0 - (100.0 / (1.0 + rs))
 
     def update_best_quotes(self) -> None:
-        cb_ids = [SYMBOL_MAP[s] for s in self.symbols if s in SYMBOL_MAP]
+        target_symbols = self.best_quote_symbols or self.symbols
+        cb_ids = [SYMBOL_MAP[symbol] for symbol in target_symbols if symbol in SYMBOL_MAP]
         if not cb_ids:
             return
         try:
@@ -228,7 +267,8 @@ class LeagueRuntime:
         except Exception as exc:
             self.log(f"best bid/ask fetch failed: {exc}")
             return
-        inverse = {v: k for k, v in SYMBOL_MAP.items()}
+        inverse = {SYMBOL_MAP[symbol]: symbol for symbol in target_symbols if symbol in SYMBOL_MAP}
+        allowed = set(target_symbols)
         for product_id, quote in data.items():
             symbol = inverse.get(product_id)
             if not symbol:
@@ -240,6 +280,9 @@ class LeagueRuntime:
             spread_bps = ((ask - bid) / bid) * 10000
             self.spread_history.setdefault(symbol, deque(maxlen=240)).append(spread_bps)
             self.best_quotes[symbol] = quote
+        for symbol in list(self.best_quotes.keys()):
+            if symbol not in allowed:
+                self.best_quotes.pop(symbol, None)
 
     def get_spread_zscore(self, symbol: str) -> float:
         history = self.spread_history.get(symbol)
@@ -928,11 +971,16 @@ class LeagueRuntime:
         if prices is None:
             return None
         self.tick += 1
-        for symbol, price in prices.items():
-            self.state[symbol]["price"] = price
-            self.history[symbol].append(Decimal(str(price)))
+        marks: dict[str, float] = {}
+        for symbol in self.symbols:
+            price = prices.get(symbol) if prices else None
+            if price is not None:
+                self.state[symbol]["price"] = price
+            current_price = self.state[symbol]["price"]
+            self.history[symbol].append(Decimal(str(current_price)))
+            marks[symbol] = round(current_price, 8)
         self.update_best_quotes()
-        return prices
+        return marks
 
     def run(self) -> None:
         self.log(
