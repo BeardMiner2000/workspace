@@ -17,19 +17,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
-# ── symbol mapping ────────────────────────────────────────────────────────────
-SYMBOL_MAP: dict[str, str] = {
-    "BTCUSDT":   "BTC-USD",
-    "ETHUSDT":   "ETH-USD",
-    "SOLUSDT":   "SOL-USD",
-    "DOGEUSDT":  "DOGE-USD",
-    "SHIBUSDT":  "SHIB-USD",
-    "PEPEUSDT":  "PEPE-USD",
-    "WIFUSDT":   "WIF-USD",
-    "BONKUSDT":  "BONK-USD",
-    "FLOKIUSDT": "FLOKI-USD",
-}
-
 COINBASE_ADV_BASE = "https://api.coinbase.com"
 COINBASE_EX_BASE = "https://api.exchange.coinbase.com"   # public fallback
 
@@ -96,6 +83,65 @@ def _get_public(url: str, timeout: float = 8.0) -> dict:
     req = urllib.request.Request(url, headers=_HEADERS)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+# ── symbol mapping ────────────────────────────────────────────────────────────
+_DEFAULT_SYMBOL_MAP: dict[str, str] = {
+    "BTCUSDT":   "BTC-USD",
+    "ETHUSDT":   "ETH-USD",
+    "SOLUSDT":   "SOL-USD",
+    "DOGEUSDT":  "DOGE-USD",
+    "SHIBUSDT":  "SHIB-USD",
+    "PEPEUSDT":  "PEPE-USD",
+    "WIFUSDT":   "WIF-USD",
+    "BONKUSDT":  "BONK-USD",
+    "FLOKIUSDT": "FLOKI-USD",
+}
+
+
+def _build_symbol_map() -> dict[str, str]:
+    url = f"{COINBASE_EX_BASE}/products"
+    try:
+        data = _get_public(url)
+    except Exception as exc:  # pragma: no cover - network failure
+        print(
+            f"[market_feed] failed to load Coinbase products ({exc}); using fallback symbols",
+            flush=True,
+        )
+        return dict(_DEFAULT_SYMBOL_MAP)
+
+    mapping: dict[str, str] = {}
+    for product in data:
+        quote = str(product.get("quote_currency", "")).upper()
+        status = str(product.get("status", "")).lower()
+        trading_disabled = bool(product.get("trading_disabled", False))
+        if quote != "USD" or status != "online" or trading_disabled:
+            continue
+        product_id = product.get("id")
+        base = str(product.get("base_currency", "")).upper()
+        if not product_id or not base:
+            continue
+        internal_symbol = f"{base}USDT"
+        mapping.setdefault(internal_symbol, product_id)
+
+    if not mapping:
+        print(
+            "[market_feed] Coinbase products API returned no USD markets; using fallback symbols",
+            flush=True,
+        )
+        return dict(_DEFAULT_SYMBOL_MAP)
+
+    for symbol, product_id in _DEFAULT_SYMBOL_MAP.items():
+        mapping.setdefault(symbol, product_id)
+
+    print(
+        f"[market_feed] loaded {len(mapping)} Coinbase USD products",
+        flush=True,
+    )
+    return mapping
+
+
+SYMBOL_MAP: dict[str, str] = _build_symbol_map()
 
 
 def _ensure_list(value: str | Iterable[str]) -> list[str]:
@@ -316,6 +362,44 @@ def _fetch_via_public_exchange(cb_sym: str) -> float:
     return float(data["price"])
 
 
+def _extract_base_currency(symbol: str) -> str | None:
+    cb_sym = SYMBOL_MAP.get(symbol)
+    if not cb_sym:
+        return None
+    return cb_sym.split('-', 1)[0].upper()
+
+
+def _fetch_usd_exchange_rates() -> dict[str, float]:
+    url = f"{COINBASE_ADV_BASE}/v2/exchange-rates?currency=USD"
+    data = _get_public(url)
+    rates = data.get('data', {}).get('rates', {}) if isinstance(data, dict) else {}
+    inverted: dict[str, float] = {}
+    for currency, raw_value in rates.items():
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if value <= 0:
+            continue
+        inverted[currency.upper()] = 1.0 / value
+    if not inverted:
+        raise RuntimeError('no USD exchange rates returned')
+    return inverted
+
+
+def _fetch_prices_via_exchange_rates(symbols: Iterable[str]) -> dict[str, float]:
+    rates = _fetch_usd_exchange_rates()
+    prices: dict[str, float] = {}
+    for symbol in symbols:
+        base = _extract_base_currency(symbol)
+        if not base:
+            continue
+        price = rates.get(base)
+        if price:
+            prices[symbol] = price
+    return prices
+
+
 def fetch_coinbase_prices(
     symbols: list[str],
     api_key: str | None = None,
@@ -326,30 +410,60 @@ def fetch_coinbase_prices(
     use_auth = bool(api_key and private_key_pem)
     prices: dict[str, float] = {}
     errors: list[str] = []
+    normalized: list[str] = []
+    seen: set[str] = set()
 
     for internal_sym in symbols:
         cb_sym = SYMBOL_MAP.get(internal_sym)
         if not cb_sym:
             errors.append(f"No Coinbase mapping for {internal_sym}")
             continue
+        if internal_sym not in seen:
+            normalized.append(internal_sym)
+            seen.add(internal_sym)
+
+    remaining = list(normalized)
+
+    if use_auth and remaining:
+        still_missing: list[str] = []
+        for internal_sym in remaining:
+            cb_sym = SYMBOL_MAP[internal_sym]
+            try:
+                prices[internal_sym] = _fetch_via_advanced_trade(cb_sym, api_key, private_key_pem)
+            except Exception:
+                still_missing.append(internal_sym)
+        remaining = still_missing
+
+    exchange_rate_error: str | None = None
+    if remaining:
         try:
-            if use_auth:
-                price = _fetch_via_advanced_trade(cb_sym, api_key, private_key_pem)
-            else:
-                price = _fetch_via_public_exchange(cb_sym)
-            prices[internal_sym] = price
+            bulk_prices = _fetch_prices_via_exchange_rates(remaining)
+            prices.update(bulk_prices)
         except Exception as exc:
-            if use_auth:
-                try:
-                    price = _fetch_via_public_exchange(cb_sym)
-                    prices[internal_sym] = price
-                    continue
-                except Exception:
-                    pass
-            errors.append(f"{internal_sym} ({cb_sym}): {exc}")
+            exchange_rate_error = f"exchange-rates fetch failed: {exc}"
+        remaining = [sym for sym in remaining if sym not in prices]
+
+    if remaining:
+        still_missing: list[str] = []
+        for internal_sym in remaining:
+            cb_sym = SYMBOL_MAP.get(internal_sym)
+            if not cb_sym:
+                continue
+            try:
+                prices[internal_sym] = _fetch_via_public_exchange(cb_sym)
+            except Exception as exc:
+                errors.append(f"{internal_sym} ({cb_sym}): {exc}")
+                still_missing.append(internal_sym)
+        remaining = still_missing
+
+    if remaining:
+        errors.extend(f"{sym}: no price available after fallbacks" for sym in remaining)
 
     if errors:
-        raise RuntimeError("Coinbase fetch errors: " + "; ".join(errors))
+        message = "Coinbase fetch errors: " + "; ".join(errors)
+        if exchange_rate_error:
+            message += f" | {exchange_rate_error}"
+        raise RuntimeError(message)
 
     return prices
 
