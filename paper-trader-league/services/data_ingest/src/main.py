@@ -176,6 +176,22 @@ class LeagueRuntime:
         if seeded:
             self.log(f"seeded initial Coinbase prices for {seeded} symbols")
 
+    def maybe_bootstrap(self) -> None:
+        if not self.bootstrap:
+            return
+        if self.season_exists():
+            self.log(
+                f"season {self.season_id} already exists; skipping bootstrap to preserve prior state"
+            )
+            return
+        payload = {"season_id": self.season_id, "starting_btc": self.starting_btc}
+        response = requests.post(
+            f"{self.trade_engine_url}/season/bootstrap", json=payload, timeout=10
+        )
+        response.raise_for_status()
+        self.log(f"bootstrapped season {self.season_id}")
+
+
     # ── market + math helpers ─────────────────────────────────────────────
     def current_marks(self) -> dict[str, Decimal]:
         return {symbol: Decimal(str(meta["price"])) for symbol, meta in self.state.items()}
