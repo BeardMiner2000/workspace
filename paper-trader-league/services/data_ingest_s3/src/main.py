@@ -579,13 +579,15 @@ class LeagueRuntime:
         last_bot_trade = self.bot_cooldowns.get(bot_id, 0.0)
         scan_ok = (now - last_bot_trade) >= 600.0
 
-        # Score each memecoin
+        # Score each memecoin (short + medium lookback windows)
+        fast_lb = 24   # ~2 minutes at 5s loops
+        slow_lb = 120  # ~10 minutes at 5s loops
         scores: dict[str, float] = {}
         for sym in memecoin_symbols:
             series = list(state.history.get(sym, []))
-            mom_1h = self.pct_change(series, 12)  # 12 ticks ≈ 1h at 5s loop
-            mom_4h = self.pct_change(series, 48) if len(series) > 48 else 0.0
-            score = (mom_1h * 2.0) + (mom_4h * 0.5)
+            mom_fast = self.pct_change(series, fast_lb)
+            mom_slow = self.pct_change(series, slow_lb) if len(series) > slow_lb else 0.0
+            score = (mom_fast * 1.5) + (mom_slow * 0.5)
             scores[sym] = score
 
         # Position management: check existing positions every loop
@@ -645,7 +647,7 @@ class LeagueRuntime:
             return
         best_sym = max(eligible, key=lambda k: eligible[k])
         best_score = eligible[best_sym]
-        if best_score <= 0.04:
+        if best_score <= 0.01:
             return
 
         price = state.marks.get(best_sym)
@@ -747,7 +749,7 @@ class LeagueRuntime:
             return
 
         # Pick top 3 by price_change_24h where change > 20%
-        eligible = [t for t in self.pump_tokens if t.get("price_change_24h", 0) > 20]
+        eligible = [t for t in self.pump_tokens if t.get("price_change_24h", 0) > 5]
         eligible.sort(key=lambda t: t.get("price_change_24h", 0), reverse=True)
         top3 = eligible[:3]
 
@@ -781,6 +783,7 @@ class LeagueRuntime:
                 "entry_time": now,
                 "token_info": token,
             }
+            usdt -= alloc
 
         self.bot_cooldowns[bot_id] = now
 
@@ -872,7 +875,7 @@ class LeagueRuntime:
 
         if phase < 240:
             # Strategy A: Fallen Angel — find biggest loser
-            if now - last_trade < 300.0:  # 5 min cooldown for this strategy
+            if now - last_trade < 180.0:  # 5 min cooldown for this strategy
                 return
             if usdt < Decimal("20"):
                 return
@@ -881,7 +884,7 @@ class LeagueRuntime:
             losers = []
             for sym in self.symbols:
                 series = list(state.history.get(sym, []))
-                change_4h = self.pct_change(series, 48)
+                change_4h = self.pct_change(series, 240)
                 rsi = self.compute_rsi(series, 14)
                 losers.append({"symbol": sym, "change_4h": change_4h, "rsi": rsi})
 
@@ -890,7 +893,7 @@ class LeagueRuntime:
                 return
             worst = losers[0]
 
-            if worst["change_4h"] < -0.08 and worst["rsi"] < 35:
+            if worst["change_4h"] < -0.03 and worst["rsi"] < 40:
                 sym = worst["symbol"]
                 if sym in self.chaos_positions:
                     return  # already holding
@@ -939,8 +942,8 @@ class LeagueRuntime:
             if not short_target_sym:
                 for sym in coinbase_memecoins:
                     series = list(state.history.get(sym, []))
-                    change_2h = self.pct_change(series, 24)
-                    if change_2h > 0.15:
+                    change_2h = self.pct_change(series, 120)
+                    if change_2h > 0.05:
                         price = state.marks.get(sym)
                         if price and price > ZERO:
                             short_target_sym = sym
