@@ -152,20 +152,18 @@ def fetch_top_solana_tokens(force: bool = False) -> list[dict[str, Any]]:
 
     tokens: list[dict[str, Any]] = []
 
-    # Try primary: boosted tokens endpoint
+    # Prefer pairs search so we get actual price data
     try:
-        data = _get_json(_BOOST_URL)
-        boost_tokens = _parse_boost_response(data)
-        if boost_tokens:
-            tokens = boost_tokens
+        data = _get_json(_FALLBACK_URL)
+        tokens = _parse_pairs_response(data)
     except Exception:
         pass
 
-    # Try fallback: pairs search
+    # Fallback: boosted tokens (may lack price information)
     if not tokens:
         try:
-            data = _get_json(_FALLBACK_URL)
-            tokens = _parse_pairs_response(data)
+            data = _get_json(_BOOST_URL)
+            tokens = _parse_boost_response(data)
         except Exception:
             pass
 
@@ -173,8 +171,10 @@ def fetch_top_solana_tokens(force: bool = False) -> list[dict[str, Any]]:
     if not tokens:
         return _cache_data  # return stale cache if available
 
-    # Filter: only tokens with parseable non-zero price (from pairs endpoint)
-    tokens = [t for t in tokens if t.get("price_usd", 0) > 0 or t.get("volume_24h", 0) > 0]
+    # Filter: only tokens with parseable non-zero price
+    tokens = [t for t in tokens if t.get("price_usd", 0) > 0]
+    if not tokens:
+        return _cache_data
 
     # Sort by volume_24h descending, take top 10
     tokens.sort(key=lambda t: t.get("volume_24h", 0), reverse=True)
