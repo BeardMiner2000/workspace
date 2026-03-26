@@ -1,0 +1,51 @@
+{
+  "session_id": "49ba75c1-e33c-4142-a2ae-ebb647131947",
+  "path": "/Users/jl/.openclaw/agents/main/sessions/49ba75c1-e33c-4142-a2ae-ebb647131947.jsonl",
+  "first_ts": "2026-03-25T22:30:53.782000+00:00",
+  "last_ts": "2026-03-25T22:31:28.279000+00:00",
+  "message_count": 4,
+  "user_messages": 2,
+  "assistant_messages": 2,
+  "tags": [
+    "stillmode",
+    "continue",
+    "where",
+    "left",
+    "off",
+    "previous",
+    "model"
+  ],
+  "summary": "Started with: Continue where you left off. The previous model attempt failed or timed out. | Outcome: Picking back up: I found the active StillMode project path and I\u2019m checking its current state so I can continue from the last debugging/release point.",
+  "highlights": [
+    {
+      "timestamp": "2026-03-25T22:30:53.782Z",
+      "role": "user",
+      "text": "Continue where you left off. The previous model attempt failed or timed out."
+    },
+    {
+      "timestamp": "2026-03-25T22:30:56.279Z",
+      "role": "assistant",
+      "text": "Let me check what was happening before to pick up where things left off."
+    },
+    {
+      "timestamp": "2026-03-25T22:31:24.726Z",
+      "role": "user",
+      "text": "Continue where you left off. The previous model attempt failed or timed out."
+    },
+    {
+      "timestamp": "2026-03-25T22:30:56.279Z",
+      "role": "assistant",
+      "text": "Let me check what was happening before to pick up where things left off."
+    },
+    {
+      "timestamp": "2026-03-25T22:31:24.726Z",
+      "role": "user",
+      "text": "Continue where you left off. The previous model attempt failed or timed out."
+    },
+    {
+      "timestamp": "2026-03-25T22:31:28.279Z",
+      "role": "assistant",
+      "text": "Picking back up: I found the active StillMode project path and I\u2019m checking its current state so I can continue from the last debugging/release point."
+    }
+  ]
+}

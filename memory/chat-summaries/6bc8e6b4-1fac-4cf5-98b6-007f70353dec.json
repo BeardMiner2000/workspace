@@ -1,0 +1,31 @@
+{
+  "session_id": "6bc8e6b4-1fac-4cf5-98b6-007f70353dec",
+  "path": "/Users/jl/.openclaw/agents/main/sessions/6bc8e6b4-1fac-4cf5-98b6-007f70353dec.jsonl",
+  "first_ts": "2026-03-25T09:19:01.584000+00:00",
+  "last_ts": "2026-03-25T09:19:01.584000+00:00",
+  "message_count": 1,
+  "user_messages": 0,
+  "assistant_messages": 1,
+  "tags": [
+    "openclaw-setup",
+    "openrouter",
+    "openclaw",
+    "models",
+    "model",
+    "google",
+    "add"
+  ],
+  "summary": "[[reply_to_current]]Reset complete\u2014`agent:main:main` was wiped from the session store, the old transcript/lock files were removed, and the fresh session you\u2019re in now is running on",
+  "highlights": [
+    {
+      "timestamp": "2026-03-25T09:19:01.584Z",
+      "role": "assistant",
+      "text": "[[reply_to_current]]Reset complete\u2014`agent:main:main` was wiped from the session store, the old transcript/lock files were removed, and the fresh session you\u2019re in now is running on **GPT\u20114.1\u2011mini** with an empty context window. --- ### How to add OpenRouter models (e.g., Grok-2) 1. **Get an API key** - Create one at <https://openrouter.ai/settings/keys>. 2. **Register the key with OpenClaw** ```bash export OPENROUTER_API_KEY=\"sk-or-...\" openclaw onboard --auth-choice apiKey \\ --token-provider openrouter \\ --token \"$OPENROUTER_API_KEY\" ``` (You can also drop `OPENROUTER_API_KEY` into `~/.openclaw/.env` so the launch agent gets it.) 3. **Add the model(s) to config** ```json5 { agents: { defaults: { models: { \"openrouter/moonshotai/grok-2\": { alias: \"grok2\" }, }, model: { primary: \"openai/gpt-4.1-mini\", fallbacks: [ \"openrouter/moonshotai/grok-2\", \"openai/gpt-5.1-codex\", \"openai-codex/gpt-5.4\", \"anthropic/claude-sonnet-4-6\", ], }, }, }, } ``` Apply it with `openclaw config patch`, then run `openclaw models list` to confirm you see the OpenRouter entries. 4. **Use it on demand** - In chat: `/model grok2` (or the full ID) to force that model for the current turn. - In tools/scripts: reference `openrouter/<provider>/<model>`. --- ### How to add Google Gemini (Flash or Pro) 1. **Create a Gemini API key** - Go to <https://aistudio.google.com/app/apikey> and copy the key. 2. **Register it** ```bash export GEMINI_API_KEY=\"...\" openclaw onboard --auth-choice google-api-key \\ --gemini-api-key \"$GEMINI_API_KEY\" ``` 3. **Add desired models to config** ```json5 { agents: { defaults: { models: { \"google/gemini-2.0-flash\": { alias: \"flash\" }, \"google/gemini-3.1-pro-preview\": { alias: \"g3pro\" }, }, model: { primary: \"openai/gpt-4.1-mini\", fallbacks: [ \"google/gemini-2.0-flash\", \"openrouter/moonshotai/grok-2\", \"openai/gpt-5.1-codex\", \"openai-codex/gpt-5.4\", \"anthropic/claude-sonnet-4-6\", ], }, }, }, } ``` Again, apply via `openclaw config patch` and verify with `openclaw models list`. 4. **Optional extras** - For Gemini\u2019s media features, make sure the gateway service can see `GEMINI_API_KEY` (either in the LaunchAgent plist or `~/.openclaw/.env`). - If you need OAuth instead of API keys, use the `google-gemini-cli` provider as documented in `/providers/google.md`. --- Let me know when you\u2019re ready\u2014I can add the OpenRouter + Gemini entries for you once you have the keys, and we can decide exactly where they sit in the fallback order."
+    },
+    {
+      "timestamp": "2026-03-25T09:19:01.584Z",
+      "role": "assistant",
+      "text": "[[reply_to_current]]Reset complete\u2014`agent:main:main` was wiped from the session store, the old transcript/lock files were removed, and the fresh session you\u2019re in now is running on **GPT\u20114.1\u2011mini** with an empty context window. --- ### How to add OpenRouter models (e.g., Grok-2) 1. **Get an API key** - Create one at <https://openrouter.ai/settings/keys>. 2. **Register the key with OpenClaw** ```bash export OPENROUTER_API_KEY=\"sk-or-...\" openclaw onboard --auth-choice apiKey \\ --token-provider openrouter \\ --token \"$OPENROUTER_API_KEY\" ``` (You can also drop `OPENROUTER_API_KEY` into `~/.openclaw/.env` so the launch agent gets it.) 3. **Add the model(s) to config** ```json5 { agents: { defaults: { models: { \"openrouter/moonshotai/grok-2\": { alias: \"grok2\" }, }, model: { primary: \"openai/gpt-4.1-mini\", fallbacks: [ \"openrouter/moonshotai/grok-2\", \"openai/gpt-5.1-codex\", \"openai-codex/gpt-5.4\", \"anthropic/claude-sonnet-4-6\", ], }, }, }, } ``` Apply it with `openclaw config patch`, then run `openclaw models list` to confirm you see the OpenRouter entries. 4. **Use it on demand** - In chat: `/model grok2` (or the full ID) to force that model for the current turn. - In tools/scripts: reference `openrouter/<provider>/<model>`. --- ### How to add Google Gemini (Flash or Pro) 1. **Create a Gemini API key** - Go to <https://aistudio.google.com/app/apikey> and copy the key. 2. **Register it** ```bash export GEMINI_API_KEY=\"...\" openclaw onboard --auth-choice google-api-key \\ --gemini-api-key \"$GEMINI_API_KEY\" ``` 3. **Add desired models to config** ```json5 { agents: { defaults: { models: { \"google/gemini-2.0-flash\": { alias: \"flash\" }, \"google/gemini-3.1-pro-preview\": { alias: \"g3pro\" }, }, model: { primary: \"openai/gpt-4.1-mini\", fallbacks: [ \"google/gemini-2.0-flash\", \"openrouter/moonshotai/grok-2\", \"openai/gpt-5.1-codex\", \"openai-codex/gpt-5.4\", \"anthropic/claude-sonnet-4-6\", ], }, }, }, } ``` Again, apply via `openclaw config patch` and verify with `openclaw models list`. 4. **Optional extras** - For Gemini\u2019s media features, make sure the gateway service can see `GEMINI_API_KEY` (either in the LaunchAgent plist or `~/.openclaw/.env`). - If you need OAuth instead of API keys, use the `google-gemini-cli` provider as documented in `/providers/google.md`. --- Let me know when you\u2019re ready\u2014I can add the OpenRouter + Gemini entries for you once you have the keys, and we can decide exactly where they sit in the fallback order."
+    }
+  ]
+}

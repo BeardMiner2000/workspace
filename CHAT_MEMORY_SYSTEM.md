@@ -27,10 +27,15 @@ Make past conversations easy to recover and reuse without dumping entire transcr
 ### 3) Chat index / cheat sheet
 - Path: `memory/chat-index.md`
 - Purpose: compact directory of important conversations with tags, date, topic, and where to look next
+- Source: partially auto-generated from session summaries
 
-### 4) Session archive search tool
+### 4) Session summaries
+- Path: `memory/chat-summaries/*.json`
+- Purpose: machine-friendly summaries of recent sessions with timestamps, tags, and compact highlights
+
+### 5) Session archive search tool
 - Path: `scripts/session_memory.py`
-- Purpose: search `~/.openclaw/agents/main/sessions/*.jsonl` and output compact context from old chats
+- Purpose: search `~/.openclaw/agents/main/sessions/*.jsonl`, build session summaries, maintain the chat index, and provide project-context lookup
 
 ## Operating Process
 
@@ -58,6 +63,8 @@ Examples:
 python3 scripts/session_memory.py find "still mode notarization"
 python3 scripts/session_memory.py find "paper trader season 4"
 python3 scripts/session_memory.py recent --days 7
+python3 scripts/session_memory.py build-index --days 14 --limit 20
+python3 scripts/session_memory.py project "still mode"
 ```
 
 ## What goes in the chat index
@@ -90,7 +97,17 @@ Skip routine banter or one-off trivia.
 - `MEMORY.md` stays small and useful
 - daily notes preserve chronology
 - chat index gives fast routing
+- machine-readable summaries make project lookup fast
 - raw session logs remain searchable for exact details
+
+## Next automation layer
+
+Preferred low-cost path:
+1. Use local transcript search/index first
+2. Use Grok/web tools for external research, not local transcript digestion
+3. Use heartbeat + cron to make sure summaries happen before long sessions rotate away
+
+If we later add LLM-based transcript summarization, route it to a free/cheap model and summarize only the newest uncataloged sessions.
 
 This avoids both failure modes:
 - losing context entirely
