@@ -87,9 +87,25 @@ services:
     volumes:
       - ./services/data_ingest_s3:/app
     environment:
-      DEFAULT_SEASON_ID: "season-003"
+      DEFAULT_SEASON_ID: "season-004"
       AUTO_BOOTSTRAP_SEASON: "true"
       DEFAULT_STARTING_BTC: "0.05"
+
+  bot_executor:
+    <<: *python-service
+    container_name: ptl-bot-executor
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && python src/main.py"
+    volumes:
+      - ./services/bot_executor:/app
+      - ./bots/bot_strategies.json:/app/src/bot_strategies.json
+    environment:
+      SEASON_ID: "season-004"
+      TRADE_ENGINE_URL: "http://ptl-trade-engine:8088"
+    depends_on:
+      trade_engine:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
 
 volumes:
   timescaledb_data:

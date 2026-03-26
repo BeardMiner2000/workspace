@@ -1,0 +1,244 @@
+{
+  "bot_strategies": {
+    "loser_reversal_hunter": {
+      "type": "mean_reversion",
+      "description": "Hunts Big Losers on Coinbase. Buys crashes, sells bounces.",
+      "entry_signals": {
+        "feed": "coinbase_big_losers",
+        "daily_change_threshold": -15,
+        "hourly_change_threshold": -8,
+        "rsi_threshold": 30
+      },
+      "position_management": {
+        "max_concurrent": 3,
+        "position_size_pct": 20,
+        "take_profit_low": 0.30,
+        "take_profit_high": 0.50,
+        "hard_stop": -0.50,
+        "time_stop_hours": 4
+      },
+      "risk_tolerance": 0.50,
+      "aggressive": true
+    },
+    "gainer_momentum_catcher": {
+      "type": "momentum",
+      "description": "Hunts Big Gainers on Coinbase. Chases momentum before exhaustion.",
+      "entry_signals": {
+        "feed": "coinbase_big_gainers",
+        "daily_change_threshold": 20,
+        "fifteen_min_change_threshold": 5,
+        "rsi_low": 50,
+        "rsi_high": 75,
+        "volume_usd_min": 50000000
+      },
+      "position_management": {
+        "max_concurrent": 4,
+        "position_size_pct": 20,
+        "take_profit_low": 0.40,
+        "take_profit_high": 0.60,
+        "hard_stop": -0.50,
+        "time_stop_hours": 3,
+        "exhaustion_rsi": 85
+      },
+      "risk_tolerance": 0.50,
+      "aggressive": true
+    },
+    "aurora_quanta": {
+      "type": "macro_trend",
+      "description": "Macro rotation and trend following. Patient, waits for alignment.",
+      "entry_signals": {
+        "feed": "market_breadth",
+        "btc_dominance_threshold": 0.40,
+        "lookback_hours": 24,
+        "trend_confirmation": "multiple_timeframe"
+      },
+      "position_management": {
+        "max_concurrent": 2,
+        "position_size_pct": 25,
+        "take_profit_low": 0.15,
+        "take_profit_high": 0.35,
+        "hard_stop": -0.40,
+        "time_stop_hours": 48
+      },
+      "risk_tolerance": 0.40,
+      "aggressive": false
+    },
+    "chaos_prophet": {
+      "type": "volatility_arbitrage",
+      "description": "Exploits volatility spikes and dislocations.",
+      "entry_signals": {
+        "feed": "volatility_monitor",
+        "vol_spike_threshold": 1.5,
+        "dislocation_threshold": 0.02
+      },
+      "position_management": {
+        "max_concurrent": 3,
+        "position_size_pct": 15,
+        "take_profit_low": 0.10,
+        "take_profit_high": 0.25,
+        "hard_stop": -0.45,
+        "time_stop_hours": 6
+      },
+      "risk_tolerance": 0.45,
+      "aggressive": true
+    },
+    "degen_ape_9000": {
+      "type": "degenerate_yolo",
+      "description": "All-in on high-conviction plays. Moonshots or rekt.",
+      "entry_signals": {
+        "feed": "sentiment_spikes",
+        "conviction_threshold": 0.9,
+        "social_signal": "trending"
+      },
+      "position_management": {
+        "max_concurrent": 2,
+        "position_size_pct": 40,
+        "take_profit_low": 0.50,
+        "take_profit_high": 2.00,
+        "hard_stop": -0.50,
+        "time_stop_hours": 12
+      },
+      "risk_tolerance": 0.50,
+      "aggressive": true
+    },
+    "mercury_vanta": {
+      "type": "microstructure",
+      "description": "Low-risk, high-frequency. Exploits small edges repeatedly.",
+      "entry_signals": {
+        "feed": "orderbook_imbalance",
+        "imbalance_threshold": 1.2,
+        "spread_threshold": 0.0005
+      },
+      "position_management": {
+        "max_concurrent": 5,
+        "position_size_pct": 10,
+        "take_profit_low": 0.005,
+        "take_profit_high": 0.02,
+        "hard_stop": -0.20,
+        "time_stop_hours": 1
+      },
+      "risk_tolerance": 0.20,
+      "aggressive": false
+    },
+    "obsidian_flux": {
+      "type": "mean_reversion",
+      "description": "S1 legacy. Mean reversion with medium conviction.",
+      "entry_signals": {
+        "feed": "price_deviation",
+        "zscore_threshold": 2.0
+      },
+      "position_management": {
+        "max_concurrent": 2,
+        "position_size_pct": 15,
+        "take_profit_low": 0.10,
+        "take_profit_high": 0.25,
+        "hard_stop": -0.35,
+        "time_stop_hours": 12
+      },
+      "risk_tolerance": 0.35,
+      "aggressive": false
+    },
+    "phantom_lattice": {
+      "type": "statistical_arbitrage",
+      "description": "S1 legacy. Pairs trading and stat arb.",
+      "entry_signals": {
+        "feed": "correlation_breakdown",
+        "zscore_threshold": 2.5
+      },
+      "position_management": {
+        "max_concurrent": 3,
+        "position_size_pct": 12,
+        "take_profit_low": 0.08,
+        "take_profit_high": 0.20,
+        "hard_stop": -0.30,
+        "time_stop_hours": 24
+      },
+      "risk_tolerance": 0.30,
+      "aggressive": false
+    },
+    "pump_surfer": {
+      "type": "pump_tracking",
+      "description": "Catches pumps on emerging altcoins.",
+      "entry_signals": {
+        "feed": "pump_detector",
+        "volume_spike": 3.0,
+        "price_surge": 0.10
+      },
+      "position_management": {
+        "max_concurrent": 4,
+        "position_size_pct": 18,
+        "take_profit_low": 0.30,
+        "take_profit_high": 1.00,
+        "hard_stop": -0.50,
+        "time_stop_hours": 3
+      },
+      "risk_tolerance": 0.50,
+      "aggressive": true
+    },
+    "solstice_drift": {
+      "type": "drift_trading",
+      "description": "S2 legacy. Trend following with volatility adjustment.",
+      "entry_signals": {
+        "feed": "ma_crossover",
+        "ma_short": 20,
+        "ma_long": 50
+      },
+      "position_management": {
+        "max_concurrent": 2,
+        "position_size_pct": 20,
+        "take_profit_low": 0.15,
+        "take_profit_high": 0.40,
+        "hard_stop": -0.35,
+        "time_stop_hours": 36
+      },
+      "risk_tolerance": 0.35,
+      "aggressive": false
+    },
+    "stormchaser_delta": {
+      "type": "event_driven",
+      "description": "S3 legacy. Fast, opportunistic. Rides volatility spikes.",
+      "entry_signals": {
+        "feed": "volatility_spike",
+        "event_threshold": 1.5,
+        "momentum": "strong"
+      },
+      "position_management": {
+        "max_concurrent": 3,
+        "position_size_pct": 22,
+        "take_profit_low": 0.20,
+        "take_profit_high": 0.50,
+        "hard_stop": -0.45,
+        "time_stop_hours": 8
+      },
+      "risk_tolerance": 0.45,
+      "aggressive": true
+    },
+    "vega_pulse": {
+      "type": "volatility_mean_reversion",
+      "description": "S3 legacy. Plays vol spikes for reversion.",
+      "entry_signals": {
+        "feed": "vol_extremes",
+        "vol_percentile": 0.90
+      },
+      "position_management": {
+        "max_concurrent": 2,
+        "position_size_pct": 18,
+        "take_profit_low": 0.12,
+        "take_profit_high": 0.30,
+        "hard_stop": -0.40,
+        "time_stop_hours": 6
+      },
+      "risk_tolerance": 0.40,
+      "aggressive": false
+    }
+  },
+  "competition_rules": {
+    "season": "season-004",
+    "duration_hours": 72,
+    "start_time": "ASAP",
+    "winner_criteria": "highest_btc_equity",
+    "liquidation_required": false,
+    "paper_trading_only": true,
+    "description": "3-day battle royale. 12 bots, 0.0075 BTC each. Winner = highest BTC value. All risk profiles welcome. Aggressive play encouraged."
+  }
+}
