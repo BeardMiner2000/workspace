@@ -1,0 +1,22 @@
+{
+  "title": "Tuque Strategy Optimizer Cron Review - Blocked on Missing Files",
+  "summary": "A cron job was triggered to review trading engine metrics for aggressive and conservative books, but execution blocked because tuque_dashboard and paper_engine.py were missing from the workspace.",
+  "projects": ["tuque-strategy-optimizer", "tuque_dashboard"],
+  "tags": ["trading", "paper-trading", "cron", "performance-review", "risk-analysis", "blocked"],
+  "decisions": [],
+  "todos": [
+    "Locate the correct paths for tuque_dashboard/data/state.json and paper_engine.py",
+    "Re-run the cron analysis once the file paths are confirmed"
+  ],
+  "user_preferences": [
+    "Make conservative updates to paper_engine.py",
+    "Include version notes in code comments and dashboard notes",
+    "Maintain distinction between aggressive and conservative models",
+    "Log action events summarizing changes and rationale",
+    "Do not send chat updates unless the change is high-impact or blocked"
+  ],
+  "followups": [
+    "User needs to provide the correct repository location or file paths for tuque_dashboard and paper_engine.py"
+  ],
+  "importance": "medium"
+}

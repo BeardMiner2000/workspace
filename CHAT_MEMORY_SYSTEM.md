@@ -116,7 +116,13 @@ Preferred low-cost path:
 3. Use Grok/web tools for external research, not bulk local transcript digestion
 4. Use heartbeat + cron to make sure summaries happen before long sessions rotate away
 
-LLM summarization is intentionally incremental: summarize only fresh sessions, store the structured JSON, then roll that up into project files.
+LLM summarization is intentionally incremental: summarize only fresh sessions, store the structured JSON in `memory/chat-summaries-llm/`, then roll that up into project files in `memory/projects/`.
+
+In practice, the reliable execution path is:
+1. local script builds/refreshes the session index
+2. current assistant session spawns isolated summarizer runs for selected fresh sessions
+3. summarizer JSON gets written to `memory/chat-summaries-llm/`
+4. `scripts/chat_memory_rollup.py --projects-only` rebuilds project rollups
 
 This avoids both failure modes:
 - losing context entirely
