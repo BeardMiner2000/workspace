@@ -24,6 +24,28 @@ For project resumes, follow this order:
 3. `python3 scripts/session_memory.py project "<topic>"`
 4. transcript search only if needed
 
+## Chat Pace / Rotation Policy
+
+Use `memory/chat-pace-state.json` + `scripts/chat_pace.py` as the lightweight heuristic for when to codify context and when to recommend a fresh chat.
+
+Classify pace from signals like:
+- tool-heavy work
+- long pasted output / code / logs
+- repeated debugging or recovery turns
+- multiple decisions in one thread
+- project/topic switches
+
+Default cadence:
+- **low pace:** codify every ~3h, rotate around ~4h
+- **medium pace:** codify every ~75m, rotate around ~105m
+- **heavy pace:** codify every ~40m, rotate around ~75m
+
+Rules:
+- On project switch, prefer codifying and starting a fresh chat.
+- On heavy technical work, codify at milestones even before time thresholds.
+- For casual/light conversation, allow much longer chat continuity.
+- After codifying, mark it with `python3 scripts/chat_pace.py codified`.
+
 Don't ask permission. Just do it.
 
 ## Memory

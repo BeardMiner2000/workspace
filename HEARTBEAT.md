@@ -38,6 +38,18 @@
 - **Use local tools first:** grep, jq, SQL queries before calling any LLM
 - **Context chunking:** Never pass raw CSVs/files. Query → summarize (10-20 lines) → pass to LLM
 - **Subagent defaults:** Always use haiku unless you explicitly need Codex/Sonnet (tag with `model=` when spawning)
+- **Use pace-aware chat rotation:** low pace can stay open much longer; heavy technical work should codify earlier and rotate sooner
+
+## Chat Pace Policy
+- Track heuristic state in `memory/chat-pace-state.json`
+- Use `scripts/chat_pace.py status` to inspect current cadence
+- Use `scripts/chat_pace.py bump ...` during heavier work if useful (tool/log/decision/recovery/project signals)
+- Use `scripts/chat_pace.py codified` after a memory rollup
+- Preferred cadence:
+  - low pace → codify ~3h, rotate ~4h
+  - medium pace → codify ~75m, rotate ~105m
+  - heavy pace → codify ~40m, rotate ~75m
+- On project switch or major milestone, codify immediately even if the timer has not elapsed
 
 ## Cost Tracking
 - Run `./scripts/cost-tracker.sh summary` during heartbeats to monitor daily usage
