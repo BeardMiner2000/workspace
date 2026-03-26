@@ -43,20 +43,26 @@ def inject_volatility():
     with get_db() as conn:
         with conn.cursor() as cur:
             for symbol, price in marks.items():
-                # Upward bias: 70% chance of +2% to +10%, 30% chance of -2% to -5%
+                # CRITICAL FIX: Work with the ACTUAL price, not accumulated changes
+                # Small movements only: ±0.5% to ±2% (70% up, 30% down)
                 if random.random() < 0.70:
                     # Upward movement (good for bots)
-                    change_pct = Decimal(str(random.uniform(0.02, 0.10)))
+                    change_pct = random.uniform(0.005, 0.020)  # 0.5% to 2% up
                 else:
                     # Downward movement (bad for bots)
-                    change_pct = Decimal(str(random.uniform(-0.05, -0.02)))
+                    change_pct = random.uniform(-0.020, -0.005)  # 0.5% to 2% down
                 
-                new_price = price * (Decimal('1') + change_pct)
+                # Apply change to CURRENT price
+                new_price = float(price) * (1.0 + change_pct)
+                
+                # Sanity check: don't allow wild swings
+                if new_price <= 0 or new_price > float(price) * 2:
+                    new_price = float(price)  # Skip this update if invalid
                 
                 cur.execute("""
                     INSERT INTO market_marks (season_id, symbol, mark_price)
                     VALUES (%s, %s, %s)
-                """, (SEASON_ID, symbol, float(new_price)))
+                """, (SEASON_ID, symbol, new_price))
             
             conn.commit()
     
