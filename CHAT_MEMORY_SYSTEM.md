@@ -33,7 +33,15 @@ Make past conversations easy to recover and reuse without dumping entire transcr
 - Path: `memory/chat-summaries/*.json`
 - Purpose: machine-friendly summaries of recent sessions with timestamps, tags, and compact highlights
 
-### 5) Session archive search tool
+### 5) LLM session summaries
+- Path: `memory/chat-summaries-llm/*.json`
+- Purpose: higher-quality structured summaries for selected recent sessions only
+
+### 6) Project memory
+- Path: `memory/projects/*.md`
+- Purpose: project-specific rollups of decisions, todos, follow-ups, and relevant sessions
+
+### 7) Session archive search tool
 - Path: `scripts/session_memory.py`
 - Purpose: search `~/.openclaw/agents/main/sessions/*.jsonl`, build session summaries, maintain the chat index, and provide project-context lookup
 
@@ -104,10 +112,11 @@ Skip routine banter or one-off trivia.
 
 Preferred low-cost path:
 1. Use local transcript search/index first
-2. Use Grok/web tools for external research, not local transcript digestion
-3. Use heartbeat + cron to make sure summaries happen before long sessions rotate away
+2. Use selective LLM summarization only for the newest uncataloged sessions
+3. Use Grok/web tools for external research, not bulk local transcript digestion
+4. Use heartbeat + cron to make sure summaries happen before long sessions rotate away
 
-If we later add LLM-based transcript summarization, route it to a free/cheap model and summarize only the newest uncataloged sessions.
+LLM summarization is intentionally incremental: summarize only fresh sessions, store the structured JSON, then roll that up into project files.
 
 This avoids both failure modes:
 - losing context entirely

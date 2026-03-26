@@ -29,8 +29,8 @@
 - If a webchat session feels long or substantive, write key decisions/context to memory before it rotates
 - If a conversation creates a new durable preference/process/project milestone, update `MEMORY.md` or `memory/chat-index.md` too
 - When resuming older work or when the prompt mentions prior context, search historical session logs via `scripts/session_memory.py` before relying on memory alone
-- During heartbeats, if there has been meaningful recent activity, rebuild the chat index with `python3 scripts/session_memory.py build-index --days 14 --limit 20`
-- If a project is being resumed, use `python3 scripts/session_memory.py project "<topic>"` to pull likely prior context before starting
+- During heartbeats, if there has been meaningful recent activity, run `python3 scripts/chat_memory_rollup.py --llm-limit 1` to refresh local summaries, selective LLM summaries, and project memory
+- If a project is being resumed, use `python3 scripts/session_memory.py project "<topic>"` or `./scripts/project_context.sh "<topic>"` to pull likely prior context before starting
 
 ## Smart Batching Rules (Cost Control)
 - **Bundle periodic checks:** Email + Calendar + Weather in ONE heartbeat turn, not separate cron jobs

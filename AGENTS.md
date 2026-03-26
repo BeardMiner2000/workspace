@@ -18,6 +18,12 @@ Before doing anything else:
 
 If a task references prior work, a previous chat, "continue", or missing context, search the session archive before guessing. Use `scripts/session_memory.py` (or the session-logs skill when appropriate) to inspect older chat transcripts in `~/.openclaw/agents/main/sessions/`.
 
+For project resumes, follow this order:
+1. `memory/projects/<project>.md` if available
+2. `memory/chat-index.md`
+3. `python3 scripts/session_memory.py project "<topic>"`
+4. transcript search only if needed
+
 Don't ask permission. Just do it.
 
 ## Memory
