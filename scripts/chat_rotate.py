@@ -64,10 +64,14 @@ def main():
     projects = top_projects()
     reset_pace(args.project)
 
+    notice_proc = run(['python3', 'scripts/rotate_notice.py', *projects], timeout=30)
+    notice_text = notice_proc.stdout.strip() if notice_proc.returncode == 0 else ''
+
     summary = {
         'rotated': True,
         'reason': args.reason,
         'projectsSaved': projects,
+        'noticeText': notice_text,
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'commands': [
             {'cmd': ' '.join(cmd), 'code': code}

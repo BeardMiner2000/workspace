@@ -47,7 +47,8 @@ Rules:
 - After codifying, mark it with `python3 scripts/chat_pace.py codified`.
 - Use `python3 scripts/chat_pace.py assess` to decide whether to stay, codify, or rotate.
 - When the assessment says `rotate`, run `python3 scripts/chat_rotate.py` to perform the checkpoint, then notify JL in chat with a short summary of what was saved and suggest starting a fresh chat.
-- Rotate notices should briefly list the saved project memory files / topics so JL knows what can be resumed later.
+- Use `python3 scripts/rotate_notice.py` (or the `noticeText` returned by `chat_rotate.py`) for a human-friendly rotation notice.
+- Rotate notices should briefly list the saved project memory files / topics and include suggested fresh-chat openers based on recent work.
 
 Don't ask permission. Just do it.
 
