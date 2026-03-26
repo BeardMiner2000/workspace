@@ -1,0 +1,209 @@
+{
+  "description": "Season 4 Bot Color Configuration for Grafana Dashboards",
+  "timestamp": "2026-03-26T02:55:00Z",
+  "bot_colors": {
+    "loser_reversal_hunter": {
+      "emoji": "🚀",
+      "hex": "#FF6B6B",
+      "name": "Red",
+      "text_color": "#FFFFFF",
+      "description": "Mean Reversion Specialist"
+    },
+    "gainer_momentum_catcher": {
+      "emoji": "📈",
+      "hex": "#4ECDC4",
+      "name": "Teal",
+      "text_color": "#FFFFFF",
+      "description": "Momentum Hunter"
+    },
+    "degen_ape_9000": {
+      "emoji": "💥",
+      "hex": "#FFD93D",
+      "name": "Gold",
+      "text_color": "#1A1A1A",
+      "description": "YOLO All-In"
+    },
+    "pump_surfer": {
+      "emoji": "🌊",
+      "hex": "#FF8B94",
+      "name": "Coral Pink",
+      "text_color": "#FFFFFF",
+      "description": "Pump Tracker"
+    },
+    "stormchaser_delta": {
+      "emoji": "⚡",
+      "hex": "#6C5CE7",
+      "name": "Purple",
+      "text_color": "#FFFFFF",
+      "description": "Event-Driven Volatility"
+    },
+    "chaos_prophet": {
+      "emoji": "🌪️",
+      "hex": "#A29BFE",
+      "name": "Light Purple",
+      "text_color": "#FFFFFF",
+      "description": "Volatility Arbitrage"
+    },
+    "aurora_quanta": {
+      "emoji": "🌍",
+      "hex": "#00B894",
+      "name": "Green",
+      "text_color": "#FFFFFF",
+      "description": "Macro Trend Following"
+    },
+    "vega_pulse": {
+      "emoji": "🌀",
+      "hex": "#FFA502",
+      "name": "Orange",
+      "text_color": "#FFFFFF",
+      "description": "Volatility Mean Reversion"
+    },
+    "obsidian_flux": {
+      "emoji": "👻",
+      "hex": "#2C3E50",
+      "name": "Dark Slate",
+      "text_color": "#FFFFFF",
+      "description": "Price Deviation MR"
+    },
+    "phantom_lattice": {
+      "emoji": "🪟",
+      "hex": "#95E1D3",
+      "name": "Mint Green",
+      "text_color": "#1A1A1A",
+      "description": "Statistical Arbitrage"
+    },
+    "solstice_drift": {
+      "emoji": "🌙",
+      "hex": "#74B9FF",
+      "name": "Light Blue",
+      "text_color": "#1A1A1A",
+      "description": "Trend Following"
+    },
+    "mercury_vanta": {
+      "emoji": "💎",
+      "hex": "#FD79A8",
+      "name": "Hot Pink",
+      "text_color": "#FFFFFF",
+      "description": "Microstructure HFT"
+    }
+  },
+  "grafana_legend_format": {
+    "loser_reversal_hunter": "🚀 Loser Reversal Hunter",
+    "gainer_momentum_catcher": "📈 Gainer Momentum Catcher",
+    "degen_ape_9000": "💥 Degen Ape 9000",
+    "pump_surfer": "🌊 Pump Surfer",
+    "stormchaser_delta": "⚡ StormChaser Delta",
+    "chaos_prophet": "🌪️ Chaos Prophet",
+    "aurora_quanta": "🌍 Aurora Quanta",
+    "vega_pulse": "🌀 Vega Pulse",
+    "obsidian_flux": "👻 Obsidian Flux",
+    "phantom_lattice": "🪟 Phantom Lattice",
+    "solstice_drift": "🌙 Solstice Drift",
+    "mercury_vanta": "💎 Mercury Vanta"
+  },
+  "grafana_panel_example": {
+    "type": "timeseries",
+    "title": "🏆 Season 4 Bot Equity — 72-Hour Championship",
+    "datasource": "TimescaleDB",
+    "targets": [
+      {
+        "refId": "A",
+        "rawSql": "SELECT time, bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-004' ORDER BY time DESC",
+        "format": "table"
+      }
+    ],
+    "fieldConfig": {
+      "defaults": {
+        "custom": {
+          "lineWidth": 2,
+          "fillOpacity": 20
+        }
+      },
+      "overrides": [
+        {
+          "matcher": { "id": "byName", "options": "loser_reversal_hunter" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#FF6B6B" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "gainer_momentum_catcher" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#4ECDC4" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "degen_ape_9000" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#FFD93D" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "pump_surfer" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#FF8B94" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "stormchaser_delta" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#6C5CE7" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "chaos_prophet" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#A29BFE" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "aurora_quanta" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#00B894" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "vega_pulse" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#FFA502" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "obsidian_flux" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#2C3E50" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "phantom_lattice" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#95E1D3" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "solstice_drift" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#74B9FF" } }
+          ]
+        },
+        {
+          "matcher": { "id": "byName", "options": "mercury_vanta" },
+          "properties": [
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "#FD79A8" } }
+          ]
+        }
+      ]
+    },
+    "options": {
+      "legend": {
+        "displayMode": "list",
+        "placement": "bottom",
+        "showLegend": true,
+        "calcs": ["mean", "max"]
+      }
+    }
+  },
+  "html_badge_template": "<div style=\"display: inline-block; padding: 8px 12px; border-radius: 6px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\" style=\"background: {{HEX}}; color: {{TEXT_COLOR}};\">{{EMOJI}} {{BOT_NAME}}</div>",
+  "css_class_template": ".bot-{{BOT_ID}} { background: {{HEX}}; color: {{TEXT_COLOR}}; }",
+  "usage_notes": "Use these colors in Grafana field overrides, HTML badges, or CSS styling. All text colors meet WCAG AA contrast requirements."
+}
