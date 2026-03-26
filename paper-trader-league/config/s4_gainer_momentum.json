@@ -1,0 +1,63 @@
+{
+  "bot_id": "gainer_momentum_catcher",
+  "season": 4,
+  "name": "Gainer Momentum Catcher",
+  "description": "Momentum hunter. Chases 'Big Gainers' on Coinbase before they hit 40-80% gains. Willing to risk 50% per trade for momentum swings.",
+  "enabled": true,
+  "strategy": "gainer_momentum_v1",
+  "capital": {
+    "btc": 0.015,
+    "entry_mode": "coinbase_stable",
+    "rebalance_interval_minutes": 60
+  },
+  "data_source": {
+    "exchange": "coinbase",
+    "feed": "big_gainers",
+    "refresh_interval_seconds": 300,
+    "minimum_filter": {
+      "daily_change_percent": 20,
+      "fifteen_min_change_percent": 5,
+      "volume_usd_24h": 50000000
+    }
+  },
+  "entry_rules": {
+    "rsi_momentum_range_low": 50,
+    "rsi_momentum_range_high": 75,
+    "price_action": "above_20day_ma_and_trending",
+    "volume_confirmation": "surging_last_30_min",
+    "position_size_percent": 20,
+    "max_concurrent_trades": 4,
+    "entry_style": "market_order_immediate"
+  },
+  "exit_rules": {
+    "take_profit_target_percent_low": 40,
+    "take_profit_target_percent_high": 60,
+    "hard_stop_loss_percent": -50,
+    "time_stop_hours": 3,
+    "exhaustion_signal": "rsi_above_85_and_volume_drops_20pct",
+    "partial_exit_trigger_percent": 30,
+    "hourly_close_check": "exit_if_momentum_dead_and_under_20pct_gain"
+  },
+  "position_management": {
+    "allow_multiple_concurrent": true,
+    "max_positions": 4,
+    "raise_cash_if_usdt_below_percent": 30,
+    "close_smallest_winners_to_raise_cash": true,
+    "rug_pull_detection": "instant_drop_over_30pct_trigger_cut",
+    "no_hedges": true
+  },
+  "monitoring": {
+    "log_all_entries": true,
+    "log_all_exits": true,
+    "grafana_dashboard": "paper_trader_s4",
+    "alert_on_loss_exceeds_percent": 25,
+    "alert_on_win_exceeds_percent": 50,
+    "track_fomo_accuracy": true
+  },
+  "risk_profile": {
+    "max_drawdown_per_trade_percent": 50,
+    "max_portfolio_drawdown_percent": 35,
+    "liquidate_all_on_portfolio_drawdown": true,
+    "acceptable_monthly_loss_percent": 25
+  }
+}

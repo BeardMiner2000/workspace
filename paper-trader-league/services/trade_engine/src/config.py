@@ -6,6 +6,8 @@ DEFAULT_BOTS = [
     ('obsidian_flux', 'Obsidian Flux'),
     ('vega_pulse', 'Vega Pulse'),
     ('phantom_lattice', 'Phantom Lattice'),
+    ('loser_reversal_hunter', 'Loser Reversal Hunter'),
+    ('gainer_momentum_catcher', 'Gainer Momentum Catcher'),
 ]
 DEFAULT_SEASON_ID = os.getenv('DEFAULT_SEASON_ID', 'season-002')
 DEFAULT_STARTING_BTC = Decimal(os.getenv('DEFAULT_STARTING_BTC', '0.05'))

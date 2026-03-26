@@ -1,0 +1,16 @@
+{
+  "date": "$(date +%Y-%m-%d)",
+  "models": {
+    "openai-codex/gpt-5.4": { "calls": 0, "tokens": 0, "estimated_cost": 0 },
+    "anthropic/claude-sonnet-4-6": { "calls": 0, "tokens": 0, "estimated_cost": 0 },
+    "anthropic/claude-haiku-4-5": { "calls": 0, "tokens": 0, "estimated_cost": 0 },
+    "grok": { "calls": 0, "tokens": 0, "estimated_cost": 0 },
+    "gemini": { "calls": 0, "tokens": 0, "estimated_cost": 0 }
+  },
+  "dailyBudget": {
+    "openai": 10.0,
+    "anthropic": 10.0,
+    "free": 100.0
+  },
+  "alerts": []
+}

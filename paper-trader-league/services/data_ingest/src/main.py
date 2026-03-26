@@ -51,6 +51,34 @@ CORE_SYMBOL_DEFAULTS = {
 }
 GENERIC_SYMBOL_TEMPLATE = {"price": 1.0, "drift": 0.0008, "amp": 0.015}
 DEFAULT_BEST_QUOTE_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT"]
+DEFAULT_LIQUID_QUOTES = {"USDT"}
+DEFAULT_TRADE_EXCLUDES = {
+    "USDT",
+    "USDC",
+    "USD",
+    "USD1",
+    "USDS",
+    "USDP",
+    "USDX",
+    "USDT0",
+    "USDM",
+    "USDB",
+    "USDD",
+    "USDE",
+    "GUSD",
+    "DAI",
+    "FDUSD",
+    "PAX",
+    "PYUSD",
+    "WBTC",
+    "CBETH",
+    "LSETH",
+    "STETH",
+    "WETH",
+    "AUSD",
+    "SUSD",
+}
+DEFAULT_BEST_QUOTE_TARGET_COUNT = 40
 
 
 @dataclass

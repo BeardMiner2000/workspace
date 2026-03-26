@@ -1,0 +1,60 @@
+{
+  "bot_id": "loser_reversal_hunter",
+  "season": 4,
+  "name": "Loser Reversal Hunter",
+  "description": "Mean reversion specialist. Hunts 'Big Losers' on Coinbase for capitulation bounces. Willing to risk 50% per trade for 3-10x bounces.",
+  "enabled": true,
+  "strategy": "loser_reversal_v1",
+  "capital": {
+    "btc": 0.015,
+    "entry_mode": "coinbase_stable",
+    "rebalance_interval_minutes": 60
+  },
+  "data_source": {
+    "exchange": "coinbase",
+    "feed": "big_losers",
+    "refresh_interval_seconds": 300,
+    "minimum_filter": {
+      "daily_change_percent": -15,
+      "hourly_change_percent": -8,
+      "market_cap_usd": 100000000
+    }
+  },
+  "entry_rules": {
+    "rsi_oversold_threshold": 30,
+    "rsi_lower_bound": 20,
+    "price_action": "below_50day_ma_or_oversold",
+    "position_size_percent": 20,
+    "max_concurrent_trades": 3,
+    "entry_style": "market_order_on_dip"
+  },
+  "exit_rules": {
+    "take_profit_target_percent_low": 30,
+    "take_profit_target_percent_high": 50,
+    "hard_stop_loss_percent": -50,
+    "time_stop_hours": 4,
+    "partial_exit_trigger_percent": 25,
+    "emergency_close_if_drops_below_percent": -50
+  },
+  "position_management": {
+    "allow_multiple_concurrent": true,
+    "max_positions": 3,
+    "rebalance_on_profit_threshold": 25,
+    "cash_hedge_if_usdt_above_percent": 60,
+    "hedge_allocation_percent": 10,
+    "hedge_symbol": "BTC-USD"
+  },
+  "monitoring": {
+    "log_all_entries": true,
+    "log_all_exits": true,
+    "grafana_dashboard": "paper_trader_s4",
+    "alert_on_loss_exceeds_percent": 25,
+    "alert_on_win_exceeds_percent": 40
+  },
+  "risk_profile": {
+    "max_drawdown_per_trade_percent": 50,
+    "max_portfolio_drawdown_percent": 35,
+    "liquidate_all_on_portfolio_drawdown": true,
+    "acceptable_monthly_loss_percent": 20
+  }
+}

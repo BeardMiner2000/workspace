@@ -21,6 +21,32 @@
 - Signal connected and working (+14158272563 is JL's number)
 - Model: Claude Sonnet via OpenClaw on JL's MacBook Pro
 
+## Model Routing Strategy (Mar 25, 2026 — LIVE)
+**Your arsenal:** Codex (primary), Sonnet (fallback), Haiku (subagents), + **Grok (free, web)**, Gemini (ready), local Llama (ready).
+
+**Tier 1 (Free/Local)**
+- **Grok** ✅ LIVE: web research, trends, current events, real-time data (free)
+- **Gemini** 📋 Ready: simple summaries, categorization (needs API key)
+- **Local Llama** 📋 Ready: file reading, regex, transforms (zero API cost)
+
+**Tier 2 (Haiku — Fast & Cheap)**
+- Analysis, filtering, categorization, quick decisions
+- Default for all subagents
+
+**Tier 3 (Heavy Lifting)**
+- **Codex** as PRIMARY: code generation, complex reasoning, architecture
+- **Sonnet** as FALLBACK: when Codex busy or need Anthropic-specific strengths
+- **GPT-5.4 Turbo** as LAST RESORT: only when above unavailable
+
+**Orchestration Rules:**
+1. **Use Grok for web research** — free, real-time, no token budget impact
+2. Batch periodic checks (email+calendar+weather in one heartbeat)
+3. Use local tools (grep, jq, SQL) before calling any LLM
+4. Context chunk: summaries (10-20 lines), never raw files
+5. Monitor cost daily via `scripts/cost-tracker.sh summary`
+6. Alert if any paid model hits >$5/day
+
 ## Lessons Learned
 - **Session rotation = memory loss.** Webchat sessions rotate and old ones get `.deleted` overnight. Always write key decisions to `memory/YYYY-MM-DD.md` during or right after a significant session. Don't trust the dashboard chat history to persist.
 - Never commit secrets (.env files) — Coinbase API key lives only in paper-trader-league/.env
+- **Token bleed from loose subagent spawning.** Haiku defaults prevent runaway costs. Always explicit upgrades to Codex/Sonnet.

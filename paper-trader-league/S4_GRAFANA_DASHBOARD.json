@@ -1,0 +1,156 @@
+{
+  "dashboard": {
+    "title": "Paper Trader League — Season 4: Gainers & Losers",
+    "tags": ["paper-trader", "season-4", "crypto", "live"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Season 4 Portfolio Performance",
+        "type": "graph",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT time, portfolio_value_usd, btc_benchmark FROM bot_metrics WHERE season = 4 ORDER BY time DESC LIMIT 1000",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "label": "Portfolio Value (USD)", "format": "currencyUSD" }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Loser Reversal Hunter — Live Positions",
+        "type": "table",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT symbol, entry_price, current_price, (current_price/entry_price - 1) * 100 as gain_pct, entry_time, elapsed_hours FROM bot_positions WHERE bot_id = 'loser_reversal_hunter' AND status = 'open' ORDER BY elapsed_hours DESC",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Gainer Momentum Catcher — Live Positions",
+        "type": "table",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT symbol, entry_price, current_price, (current_price/entry_price - 1) * 100 as gain_pct, entry_time, elapsed_hours FROM bot_positions WHERE bot_id = 'gainer_momentum_catcher' AND status = 'open' ORDER BY elapsed_hours DESC",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Loser Reversal Hunter — Daily PnL",
+        "type": "stat",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT SUM(realized_pnl_usd) as pnl FROM bot_trades WHERE bot_id = 'loser_reversal_hunter' AND DATE(exit_time) = CURRENT_DATE",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Gainer Momentum Catcher — Daily PnL",
+        "type": "stat",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT SUM(realized_pnl_usd) as pnl FROM bot_trades WHERE bot_id = 'gainer_momentum_catcher' AND DATE(exit_time) = CURRENT_DATE",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Trade Log — Loser Reversal Hunter",
+        "type": "table",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT entry_time, exit_time, symbol, entry_price, exit_price, (exit_price/entry_price - 1) * 100 as gain_pct, realized_pnl_usd FROM bot_trades WHERE bot_id = 'loser_reversal_hunter' ORDER BY exit_time DESC LIMIT 50",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Trade Log — Gainer Momentum Catcher",
+        "type": "table",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT entry_time, exit_time, symbol, entry_price, exit_price, (exit_price/entry_price - 1) * 100 as gain_pct, realized_pnl_usd FROM bot_trades WHERE bot_id = 'gainer_momentum_catcher' ORDER BY exit_time DESC LIMIT 50",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Win Rate — Loser Reversal Hunter",
+        "type": "stat",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT ROUND(SUM(CASE WHEN realized_pnl_usd > 0 THEN 1 ELSE 0 END)::float / COUNT(*)::float * 100, 1) as win_rate FROM bot_trades WHERE bot_id = 'loser_reversal_hunter' AND DATE(exit_time) >= CURRENT_DATE - 7",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Win Rate — Gainer Momentum Catcher",
+        "type": "stat",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT ROUND(SUM(CASE WHEN realized_pnl_usd > 0 THEN 1 ELSE 0 END)::float / COUNT(*)::float * 100, 1) as win_rate FROM bot_trades WHERE bot_id = 'gainer_momentum_catcher' AND DATE(exit_time) >= CURRENT_DATE - 7",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Max Drawdown — Season 4",
+        "type": "stat",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT MIN(portfolio_value_usd) as min_value, (MIN(portfolio_value_usd) / MAX(portfolio_value_usd) - 1) * 100 as max_drawdown_pct FROM bot_metrics WHERE season = 4",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Coinbase Big Losers — Monitor (Last Updated)",
+        "type": "table",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT symbol, change_24h_pct, change_1h_pct, last_updated FROM coinbase_big_losers ORDER BY last_updated DESC LIMIT 20",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Coinbase Big Gainers — Monitor (Last Updated)",
+        "type": "table",
+        "datasource": "TimescaleDB",
+        "targets": [
+          {
+            "rawSql": "SELECT symbol, change_24h_pct, change_15m_pct, volume_usd_24h, last_updated FROM coinbase_big_gainers ORDER BY last_updated DESC LIMIT 20",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  }
+}
