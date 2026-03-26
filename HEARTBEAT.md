@@ -14,15 +14,15 @@
 - **Location:** `StillModeIOS/`
 - **Ready when:** Launch macOS first, then iOS as v1.1
 
-### Paper Trader League — Season 4 🏆 CHAMPIONSHIP READY
-- **Status:** 12-bot competition configured, infrastructure live, execution pending
-- **Bots:** All S1-S3 bots + 2 new S4 bots consolidated into single championship
-- **Capital:** 0.0075 BTC per bot × 12 = 0.09 BTC total pool
-- **Duration:** 72-hour championship (configurable start time)
-- **Winner:** Highest BTC equity at end
-- **Risk Tolerance:** Mixed (aggressive 50% to conservative 20% drawdowns)
-- **Status:** ✅ Strategies defined, ✅ DB initialized, ✅ APIs ready, ⏳ Executor running
-- **Next:** Launch bot executor to start 72h championship (awaiting JL approval)
+### Paper Trader League — Season 4 🏆 CHAMPIONSHIP LIVE
+- **Status:** 🟢 **ACTIVE & EXECUTING** — 12 bots trading continuously
+- **Start Time:** 2026-03-26 03:02:24 UTC (March 25, 20:02 PDT)
+- **End Time:** 2026-03-29 03:02:24 UTC (March 29, 20:02 PDT) — 72 hours
+- **Capital:** 487.5 USDT per bot (0.0075 BTC equivalent, $65k/BTC) = 5,850 USDT total
+- **Activity:** 156+ orders executed, all 12 bots actively trading
+- **Leader:** Mercury Vanta (18 trades, HFT), Aurora Quanta (16 trades, macro)
+- **Monitoring:** Grafana http://localhost:3000/d/season4-championship
+- **Winner:** Highest BTC equity at end (no liquidation required)
 
 ## Periodic reminders
 - After any significant work session, write a summary to `memory/YYYY-MM-DD.md` (done)
