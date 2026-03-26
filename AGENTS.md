@@ -45,6 +45,8 @@ Rules:
 - On heavy technical work, codify at milestones even before time thresholds.
 - For casual/light conversation, allow much longer chat continuity.
 - After codifying, mark it with `python3 scripts/chat_pace.py codified`.
+- Use `python3 scripts/chat_pace.py assess` to decide whether to stay, codify, or rotate.
+- When the assessment says `rotate`, prefer wrapping up the current milestone and recommending a fresh chat.
 
 Don't ask permission. Just do it.
 

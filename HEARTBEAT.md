@@ -43,6 +43,7 @@
 ## Chat Pace Policy
 - Track heuristic state in `memory/chat-pace-state.json`
 - Use `scripts/chat_pace.py status` to inspect current cadence
+- Use `scripts/chat_pace.py assess` to decide stay vs codify vs rotate
 - Use `scripts/chat_pace.py bump ...` during heavier work if useful (tool/log/decision/recovery/project signals)
 - Use `scripts/chat_pace.py codified` after a memory rollup
 - Preferred cadence:
