@@ -1,0 +1,203 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 2, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto"},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT SUM(equity_btc) FROM bot_metrics WHERE season_id = 'season-004'",
+          "refId": "A"
+        }
+      ],
+      "title": "💰 Total Pool",
+      "type": "stat"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {"defaults": {"mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 2, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto"},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT COUNT(DISTINCT bot_id) FROM season_bots WHERE season_id = 'season-004'",
+          "refId": "A"
+        }
+      ],
+      "title": "🤖 Competitors",
+      "type": "stat"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {"defaults": {"mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 2, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto"},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT COUNT(*) FROM bot_orders WHERE season_id = 'season-004'",
+          "refId": "A"
+        }
+      ],
+      "title": "📊 Total Trades",
+      "type": "stat"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "BTC",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "pointSize": 6,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "short"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "yolo_ape_9000"}, "properties": [{"id": "color", "value": {"fixedColor": "#FFD93D", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "pair_trader"}, "properties": [{"id": "color", "value": {"fixedColor": "#4ECDC4", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "grid_scalper"}, "properties": [{"id": "color", "value": {"fixedColor": "#00B894", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "bankruptcy_specialist"}, "properties": [{"id": "color", "value": {"fixedColor": "#FF6B6B", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "chaos_degen"}, "properties": [{"id": "color", "value": {"fixedColor": "#FF8B94", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "aurora_quanta"}, "properties": [{"id": "color", "value": {"fixedColor": "#00B894", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "chaos_prophet"}, "properties": [{"id": "color", "value": {"fixedColor": "#A29BFE", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "degen_ape_9000"}, "properties": [{"id": "color", "value": {"fixedColor": "#FFD93D", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "mercury_vanta"}, "properties": [{"id": "color", "value": {"fixedColor": "#FD79A8", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "obsidian_flux"}, "properties": [{"id": "color", "value": {"fixedColor": "#2C3E50", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "phantom_lattice"}, "properties": [{"id": "color", "value": {"fixedColor": "#95E1D3", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "pump_surfer"}, "properties": [{"id": "color", "value": {"fixedColor": "#FF8B94", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "solstice_drift"}, "properties": [{"id": "color", "value": {"fixedColor": "#74B9FF", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "stormchaser_delta"}, "properties": [{"id": "color", "value": {"fixedColor": "#6C5CE7", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "vega_pulse"}, "properties": [{"id": "color", "value": {"fixedColor": "#FFA502", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "loser_reversal_hunter"}, "properties": [{"id": "color", "value": {"fixedColor": "#FF6B6B", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "gainer_momentum_catcher"}, "properties": [{"id": "color", "value": {"fixedColor": "#4ECDC4", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 2},
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max", "min"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {"mode": "multi"}
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT time, bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-004' ORDER BY time DESC LIMIT 2000",
+          "refId": "A"
+        }
+      ],
+      "title": "🏆 LEADERBOARD — Bot Equity Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 12},
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "pieType": "donut",
+        "tooltip": {"mode": "single"}
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT bot_id, COUNT(*) as trades FROM bot_orders WHERE season_id = 'season-004' GROUP BY bot_id ORDER BY trades DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "📈 Trade Distribution — Who's Trading Most?",
+      "type": "piechart"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "displayMode": "auto"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 22},
+      "id": 6,
+      "options": {
+        "showHeader": true,
+        "sortBy": [{"displayName": "Trades", "desc": true}]
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT bot_id, COUNT(*) as trades, MAX(created_at) as last_trade FROM bot_orders WHERE season_id = 'season-004' GROUP BY bot_id ORDER BY trades DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "📝 Trade Log (Scroll for Details)",
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {}, "indexByName": {}, "renameByName": {}}}
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["season-4", "championship", "bots"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "UTC",
+  "title": "🏆 SEASON 4 — 12-Bot Championship (Fee-Aware)",
+  "uid": "season4-v2",
+  "version": 1
+}
