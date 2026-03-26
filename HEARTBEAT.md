@@ -25,8 +25,10 @@
 - **Winner:** Highest BTC equity at end (no liquidation required)
 
 ## Periodic reminders
-- After any significant work session, write a summary to `memory/YYYY-MM-DD.md` (done)
-- If a webchat session feels long or substantive, write key decisions/context to memory before it rotates (done)
+- After any significant work session, write a summary to `memory/YYYY-MM-DD.md`
+- If a webchat session feels long or substantive, write key decisions/context to memory before it rotates
+- If a conversation creates a new durable preference/process/project milestone, update `MEMORY.md` or `memory/chat-index.md` too
+- When resuming older work or when the prompt mentions prior context, search historical session logs via `scripts/session_memory.py` before relying on memory alone
 
 ## Smart Batching Rules (Cost Control)
 - **Bundle periodic checks:** Email + Calendar + Weather in ONE heartbeat turn, not separate cron jobs

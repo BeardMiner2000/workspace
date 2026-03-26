@@ -13,7 +13,10 @@ Before doing anything else:
 1. Read `SOUL.md` — this is who you are
 2. Read `USER.md` — this is who you're helping
 3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
+4. Read `memory/chat-index.md` if it exists — this is the fast map of important older conversations
+5. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
+
+If a task references prior work, a previous chat, "continue", or missing context, search the session archive before guessing. Use `scripts/session_memory.py` (or the session-logs skill when appropriate) to inspect older chat transcripts in `~/.openclaw/agents/main/sessions/`.
 
 Don't ask permission. Just do it.
 

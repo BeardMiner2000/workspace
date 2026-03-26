@@ -48,5 +48,6 @@
 
 ## Lessons Learned
 - **Session rotation = memory loss.** Webchat sessions rotate and old ones get `.deleted` overnight. Always write key decisions to `memory/YYYY-MM-DD.md` during or right after a significant session. Don't trust the dashboard chat history to persist.
+- **Use indexed memory, not hope.** For older context: check `memory/chat-index.md`, then search session archives with `scripts/session_memory.py` / the session-logs skill before guessing what happened in prior chats.
 - Never commit secrets (.env files) — Coinbase API key lives only in paper-trader-league/.env
 - **Token bleed from loose subagent spawning.** Haiku defaults prevent runaway costs. Always explicit upgrades to Codex/Sonnet.
