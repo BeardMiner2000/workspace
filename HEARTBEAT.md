@@ -14,13 +14,15 @@
 - **Location:** `StillModeIOS/`
 - **Ready when:** Launch macOS first, then iOS as v1.1
 
-### Paper Trader League — Season 4 🎯 LIVE
-- **Status:** Two new bots deployed (Loser Reversal Hunter, Gainer Momentum Catcher)
-- **Capital:** 0.03 BTC total (0.015 BTC each)
-- **Strategy:** Extreme volatility (50% risk per trade) on Coinbase Big Gainers/Losers
-- **Dashboard:** Grafana `paper_trader_s4` (live PnL, positions, trade log)
-- **Launch:** March 25, 2026, 15:57 PDT
-- **Target:** +15-25% monthly gains
+### Paper Trader League — Season 4 🏆 CHAMPIONSHIP READY
+- **Status:** 12-bot competition configured, infrastructure live, execution pending
+- **Bots:** All S1-S3 bots + 2 new S4 bots consolidated into single championship
+- **Capital:** 0.0075 BTC per bot × 12 = 0.09 BTC total pool
+- **Duration:** 72-hour championship (configurable start time)
+- **Winner:** Highest BTC equity at end
+- **Risk Tolerance:** Mixed (aggressive 50% to conservative 20% drawdowns)
+- **Status:** ✅ Strategies defined, ✅ DB initialized, ✅ APIs ready, ⏳ Executor running
+- **Next:** Launch bot executor to start 72h championship (awaiting JL approval)
 
 ## Periodic reminders
 - After any significant work session, write a summary to `memory/YYYY-MM-DD.md` (done)
