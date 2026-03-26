@@ -2,6 +2,12 @@
 
 ## Active Projects
 
+## Work Chat Guidance
+- Treat `memory/session-registry.json` as the friendly layer over raw OpenClaw sessions
+- Prefer one obvious current work chat/project at a time using `scripts/work_chat.py`
+- When JL seems confused by session clutter, respond with the current work project + suggested resume opener instead of explaining raw session IDs
+
+
 ### Still Mode (macOS) 🚀 TESTING PHASE
 - **Status:** v1.0 UI bugs fixed (popup window, multi-select, state persistence). Ready for final user testing.
 - **Location:** `workspace/stillmode/`

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "currentWork": "openclaw-workspace",
+  "workChats": [
+    {
+      "slug": "openclaw-workspace",
+      "project": "OpenClaw workspace",
+      "status": "active",
+      "createdAt": "2026-03-26T19:18:29.992155+00:00",
+      "updatedAt": "2026-03-26T19:18:29.992542+00:00",
+      "notes": [
+        "Primary work chat for OpenClaw UX/session management improvements."
+      ],
+      "resumePrompt": "Resume OpenClaw workspace",
+      "freshChatOpeners": [
+        "Resume OpenClaw workspace",
+        "What's the current state of OpenClaw workspace?",
+        "Continue work on OpenClaw workspace"
+      ]
+    }
+  ],
+  "notes": "Friendly registry for human-scale work chats layered on top of OpenClaw sessions."
+}

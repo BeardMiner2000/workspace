@@ -24,6 +24,23 @@ For project resumes, follow this order:
 3. `python3 scripts/session_memory.py project "<topic>"`
 4. transcript search only if needed
 
+## Work Chat Manager
+
+Use `memory/session-registry.json` + `scripts/work_chat.py` as the human-friendly layer over OpenClaw's raw session clutter.
+
+Goals:
+- JL should not need to mentally track heartbeat/subagent/session IDs
+- maintain one obvious current work chat/project at a time
+- rotate/archive work cleanly while preserving resumable project prompts
+
+Commands:
+- `python3 scripts/work_chat.py start "<project>"`
+- `python3 scripts/work_chat.py resume "<project>"`
+- `python3 scripts/work_chat.py rotate`
+- `python3 scripts/work_chat.py list`
+
+Use this registry to steer JL toward a small set of understandable work chats/projects instead of raw session-picker entries.
+
 ## Chat Pace / Rotation Policy
 
 Use `memory/chat-pace-state.json` + `scripts/chat_pace.py` as the lightweight heuristic for when to codify context and when to recommend a fresh chat.
