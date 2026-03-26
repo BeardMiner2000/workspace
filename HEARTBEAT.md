@@ -30,6 +30,10 @@
 - If a conversation creates a new durable preference/process/project milestone, update `MEMORY.md` or `memory/chat-index.md` too
 - When resuming older work or when the prompt mentions prior context, search historical session logs via `scripts/session_memory.py` before relying on memory alone
 - During heartbeats, if there has been meaningful recent activity, run `python3 scripts/chat_memory_rollup.py --llm-limit 1` to refresh local summaries, selective LLM summaries, and project memory
+- During heartbeats or major work turns, run `python3 scripts/chat_pace.py assess`
+  - if result is `stay`: continue normally
+  - if result is `codify`: update memory and mark codified
+  - if result is `rotate`: run `python3 scripts/chat_rotate.py --reason "Rotation recommended by chat pace policy."` and notify JL with a brief summary of saved projects they can return to
 - If a project is being resumed, use `python3 scripts/session_memory.py project "<topic>"` or `./scripts/project_context.sh "<topic>"` to pull likely prior context before starting
 
 ## Smart Batching Rules (Cost Control)
