@@ -332,7 +332,7 @@
             }
           ],
           "metricColumn": "none",
-          "rawSql": "SELECT\n  time,\n  bot_id,\n  equity_btc\nFROM bot_metrics\nWHERE season_id = 'season-004'\nORDER BY time DESC\nLIMIT 1000;",
+          "rawSql": "SELECT\n  time,\n  bot_id,\n  equity_btc\nFROM bot_metrics\nWHERE season_id = 'season-004' AND bot_id IN ('gainer_momentum_catcher','loser_reversal_hunter')\nORDER BY time DESC\nLIMIT 1000;",
           "refId": "A",
           "select": [
             [
@@ -347,7 +347,7 @@
           "timeColumn": "time"
         }
       ],
-      "title": "🏆 Season 4 Bot Equity — 72-Hour Championship",
+      "title": "\ud83c\udfc6 Season 4 Bot Equity \u2014 72-Hour Championship",
       "type": "timeseries"
     },
     {
@@ -615,7 +615,7 @@
             }
           ],
           "metricColumn": "none",
-          "rawSql": "SELECT\n  time,\n  bot_id,\n  (realized_pnl_btc / 0.0075) * 100 as pnl_pct\nFROM bot_metrics\nWHERE season_id = 'season-004'\nORDER BY time DESC\nLIMIT 1000;",
+          "rawSql": "SELECT\n  time,\n  bot_id,\n  (realized_pnl_btc / 0.0075) * 100 as pnl_pct\nFROM bot_metrics\nWHERE season_id = 'season-004' AND bot_id IN ('gainer_momentum_catcher','loser_reversal_hunter')\nORDER BY time DESC\nLIMIT 1000;",
           "refId": "A",
           "select": [
             [
@@ -630,7 +630,7 @@
           "timeColumn": "time"
         }
       ],
-      "title": "📊 Realized PnL % — All 12 Bots",
+      "title": "\ud83d\udcca Realized PnL % \u2014 2 Bots",
       "type": "timeseries"
     },
     {
@@ -898,7 +898,7 @@
             }
           ],
           "metricColumn": "none",
-          "rawSql": "SELECT\n  time,\n  bot_id,\n  trade_count\nFROM bot_metrics\nWHERE season_id = 'season-004'\nORDER BY time DESC\nLIMIT 1000;",
+          "rawSql": "SELECT\n  time,\n  bot_id,\n  trade_count\nFROM bot_metrics\nWHERE season_id = 'season-004' AND bot_id IN ('gainer_momentum_catcher','loser_reversal_hunter')\nORDER BY time DESC\nLIMIT 1000;",
           "refId": "A",
           "select": [
             [
@@ -913,7 +913,7 @@
           "timeColumn": "time"
         }
       ],
-      "title": "🔄 Trade Count Over Time",
+      "title": "\ud83d\udd04 Trade Count Over Time",
       "type": "timeseries"
     }
   ],
@@ -935,7 +935,7 @@
   },
   "timepicker": {},
   "timezone": "UTC",
-  "title": "🏆 Season 4 Bot Championship",
+  "title": "\ud83c\udfc6 Season 4 \u2014 Gainer vs Loser",
   "uid": "season4-championship",
   "version": 1
 }
