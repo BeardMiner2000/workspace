@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-Season 4 Bot Executor — 3-Day Competition
-Automates all 12 bots trading simultaneously against each other.
+Season 4 Bot Executor — 2-Bot Championship
+Runs only the Season 4 gainers/losers bots.
+
+v3 notes (2026-03-26):
+- stop running the legacy 12-bot championship bundle
+- keep Season 4 scoped to the two intended S4 bots only
+- reduces repeated SQL errors from unsupported legacy paths
 """
 
 import asyncio
@@ -31,12 +36,17 @@ DB_NAME = os.getenv('POSTGRES_DB', 'paperbot')
 COMPETITION_DURATION_HOURS = 72
 REFRESH_INTERVAL_SECONDS = 5
 MAX_CONCURRENT_ORDERS_PER_BOT = 4
+ACTIVE_BOT_IDS = [
+    'loser_reversal_hunter',
+    'gainer_momentum_catcher',
+]
 
 # Load bot strategies
 STRATEGIES_FILE = Path(__file__).parent / 'bot_strategies.json'
 with open(STRATEGIES_FILE) as f:
     STRATEGIES_DATA = json.load(f)
-    BOT_STRATEGIES = STRATEGIES_DATA['bot_strategies']
+    ALL_BOT_STRATEGIES = STRATEGIES_DATA['bot_strategies']
+    BOT_STRATEGIES = {bot_id: ALL_BOT_STRATEGIES[bot_id] for bot_id in ACTIVE_BOT_IDS}
 
 # ============================================================================
 # DATABASE
@@ -374,9 +384,9 @@ class BotExecutor:
 # ============================================================================
 
 async def run_competition():
-    """Run the 3-day competition with all 12 bots."""
+    """Run the 3-day competition with the two Season 4 bots only."""
     print("=" * 70)
-    print(f"🚀 SEASON 4 BOT COMPETITION STARTED")
+    print(f"🚀 SEASON 4 2-BOT COMPETITION STARTED")
     print(f"   Duration: {COMPETITION_DURATION_HOURS} hours")
     print(f"   Bots: {len(BOT_STRATEGIES)}")
     print(f"   Season: {SEASON_ID}")
