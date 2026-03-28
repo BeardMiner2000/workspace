@@ -43,25 +43,42 @@ def build_index(days=14, limit=20):
     return proc.stdout.strip()
 
 
-def get_unsummarized(limit):
+def get_rollup_candidates(limit):
     proc = run(['python3', str(LLM_SCRIPT), 'check', '--limit', str(limit), str(LOCAL_SUMMARIES)])
+    candidates = []
+    skipped = []
     if proc.returncode != 0:
-        return []
-    return [s for s in proc.stdout.strip().splitlines() if s.strip()]
+        return candidates, skipped
+    for line in proc.stdout.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split('\t', 2)
+        if parts[0] == 'SUMMARIZE' and len(parts) >= 2:
+            candidates.append(parts[1])
+        elif parts[0] == 'SKIP' and len(parts) >= 3:
+            skipped.append((parts[1], parts[2]))
+        else:
+            candidates.append(line)
+    return candidates, skipped
 
 
 def get_prompt(session_id):
-    proc = run(['python3', str(LLM_SCRIPT), 'prompt', session_id], timeout=15)
+    try:
+        proc = run(['python3', str(LLM_SCRIPT), 'prompt', session_id], timeout=15)
+    except subprocess.TimeoutExpired:
+        return None, 'prompt timed out'
     if proc.returncode != 0:
-        return None
-    return proc.stdout
+        reason = (proc.stderr or proc.stdout).strip() or 'prompt failed'
+        return None, reason
+    return proc.stdout, None
 
 
 def summarize_with_llm(session_id, model='anthropic/claude-haiku-4-5'):
     """Call openclaw agent in a new isolated session to avoid lock contention."""
-    prompt = get_prompt(session_id)
+    prompt, prompt_error = get_prompt(session_id)
     if not prompt:
-        print(f'[warn] could not get prompt for {session_id}', file=sys.stderr)
+        print(f'[warn] could not get prompt for {session_id}: {prompt_error}', file=sys.stderr)
         return False
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
@@ -76,7 +93,11 @@ def summarize_with_llm(session_id, model='anthropic/claude-haiku-4-5'):
             '--message', prompt,
             '--json',
         ]
-        proc = run(cmd, timeout=60)
+        try:
+            proc = run(cmd, timeout=60)
+        except subprocess.TimeoutExpired:
+            print(f'[warn] LLM call timed out for {session_id}', file=sys.stderr)
+            return False
         if proc.returncode != 0:
             print(f'[warn] LLM call failed for {session_id}: {proc.stderr[:200]}', file=sys.stderr)
             return False
@@ -91,7 +112,7 @@ def summarize_with_llm(session_id, model='anthropic/claude-haiku-4-5'):
         if start == -1 or end < start:
             print(f'[warn] no JSON in LLM response for {session_id}', file=sys.stderr)
             return False
-        data = json.loads(reply_text[start:end+1])
+        data = json.loads(reply_text[start:end + 1])
         LLM_SUMMARIES.mkdir(parents=True, exist_ok=True)
         (LLM_SUMMARIES / f'{session_id}.json').write_text(json.dumps(data, indent=2))
         print(f'  [llm] summarized {session_id}')
@@ -108,7 +129,12 @@ def build_projects():
             data = json.loads(path.read_text())
         except Exception:
             continue
-        for project in data.get('projects', []):
+        if data.get('status') == 'skipped':
+            continue
+        projects = data.get('projects', [])
+        if not isinstance(projects, list):
+            continue
+        for project in projects:
             key = project.strip().lower().replace(' ', '-').replace('/', '-')[:80]
             if not key:
                 continue
@@ -133,7 +159,7 @@ def build_projects():
             return out
 
         lines = [
-            f"# Project Memory — {info['name']}",
+            f"# Project Memory - {info['name']}",
             '',
             f"Sessions: {', '.join(info['sessions'][:12])}",
             f"Tags: {', '.join(sorted(info['tags'])[:12])}",
@@ -167,7 +193,7 @@ def main():
         msg = build_index(args.days, args.limit)
         print(msg)
 
-        unsummarized = get_unsummarized(args.llm_limit)
+        unsummarized, skipped = get_rollup_candidates(args.llm_limit)
         created = []
         for sid in unsummarized:
             ok = summarize_with_llm(sid, args.model)
@@ -176,6 +202,9 @@ def main():
         print(f'LLM summaries created: {len(created)}')
         if created:
             print('  ' + ', '.join(created))
+        print(f'Sessions skipped: {len(skipped)}')
+        for sid, reason in skipped[:10]:
+            print(f'  {sid}: {reason}')
     else:
         print('[projects-only mode]')
 
