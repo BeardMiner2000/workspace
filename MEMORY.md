@@ -21,6 +21,41 @@
 - Signal connected and working (+14158272563 is JL's number)
 - Model: Claude Sonnet via OpenClaw on JL's MacBook Pro
 
+## NEW STANDARD (Mar 28, 2026) 🚀
+
+### Paper Trader League - LIVE & OPERATIONAL
+
+**All Three Seasons Running Continuously:**
+- **Season 2:** 4 bots (obsidian_flux, solstice_drift, phantom_lattice, vega_pulse) — actively trading
+- **Season 3:** 3 bots (degen_ape_9000, pump_surfer, chaos_prophet) — actively trading
+- **Season 4:** 2 bots (loser_reversal_hunter, gainer_momentum_catcher) — running via backup executor (marks-only strategy)
+  - Aggressive: 75% position size per trade if justified
+  - Max concurrent: 2 positions per bot
+  - Entry on timeframe-based thresholds (15m, 1h, 4h, 24h moves)
+
+**Executor Status:**
+- Season 2/3: Original data_ingest + trade_engine pipeline
+- Season 4: `main_backup.py` executor (simpler, marks-only, proven working after 3 prior iterations)
+  - No dependency on brittle Big Gainers/Losers feeds
+  - Avoids micro-order spam with proper cooldowns
+
+**Dashboard & Monitoring:**
+- Grafana on localhost:3000
+- New master-summary dashboard aggregates all three seasons
+- Public web app ready for Render/Cloudflare hosting
+- Import master-summary.json into Grafana to view
+
+**Trading Metrics (as of 2026-03-28 15:10 UTC):**
+- S2: 360-374 orders per bot, continuous trading
+- S3: 33-183 orders per bot, continuous trading
+- S4: 4-6 orders per bot (recent activity, backup executor just launched)
+
+### What Works Now (Don't Break It)
+1. Season 2/3 keep running via original pipeline — zero changes needed
+2. Season 4 runs via backup executor — simpler, faster to debug if issues arise
+3. Chat rotation + memory system fully automated
+4. Public dashboard infrastructure ready for remote viewing
+
 ## Model Routing Strategy (Mar 25, 2026 — LIVE)
 **Your arsenal:** Codex (primary), Sonnet (fallback), Haiku (subagents), + **Grok (free, web)**, Gemini (ready), local Llama (ready).
 
