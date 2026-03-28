@@ -51,5 +51,6 @@
 - **Use indexed memory, not hope.** For older context: check `memory/chat-index.md`, then search session archives with `scripts/session_memory.py` / the session-logs skill before guessing what happened in prior chats.
 - **Isolate LLM transcript summarization.** Directly invoking the active main-session lane can hit session-lock conflicts; higher-quality transcript summaries should run in isolated subagent/session flows.
 - **Use pace-based chat rotation.** Low-work chats can stay open longer; medium/heavy technical chats should codify sooner and rotate earlier based on lightweight heuristic signals rather than vibes alone.
+- **When JL’s intent is clear, act instead of permission-looping.** If JL asks for an analysis, projection, or follow-through that obviously implies doing the work, proceed directly and present the result rather than asking for confirmation first.
 - Never commit secrets (.env files) — Coinbase API key lives only in paper-trader-league/.env
 - **Token bleed from loose subagent spawning.** Haiku defaults prevent runaway costs. Always explicit upgrades to Codex/Sonnet.

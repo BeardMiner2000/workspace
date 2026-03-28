@@ -399,6 +399,8 @@ def fetch_coinbase_prices(
     symbols: list[str],
     api_key: str | None = None,
     private_key_pem: str | None = None,
+    *,
+    allow_partial: bool = False,
 ) -> dict[str, float]:
     """Fetch current spot prices from Coinbase."""
     api_key, private_key_pem = _load_api_creds(api_key, private_key_pem)
@@ -419,6 +421,15 @@ def fetch_coinbase_prices(
 
     remaining = list(normalized)
 
+    exchange_rate_error: str | None = None
+    if remaining:
+        try:
+            bulk_prices = _fetch_prices_via_exchange_rates(remaining)
+            prices.update(bulk_prices)
+        except Exception as exc:
+            exchange_rate_error = f"exchange-rates fetch failed: {exc}"
+        remaining = [sym for sym in remaining if sym not in prices]
+
     if use_auth and remaining:
         still_missing: list[str] = []
         for internal_sym in remaining:
@@ -428,15 +439,6 @@ def fetch_coinbase_prices(
             except Exception:
                 still_missing.append(internal_sym)
         remaining = still_missing
-
-    exchange_rate_error: str | None = None
-    if remaining:
-        try:
-            bulk_prices = _fetch_prices_via_exchange_rates(remaining)
-            prices.update(bulk_prices)
-        except Exception as exc:
-            exchange_rate_error = f"exchange-rates fetch failed: {exc}"
-        remaining = [sym for sym in remaining if sym not in prices]
 
     if remaining:
         still_missing: list[str] = []
@@ -458,6 +460,9 @@ def fetch_coinbase_prices(
         message = "Coinbase fetch errors: " + "; ".join(errors)
         if exchange_rate_error:
             message += f" | {exchange_rate_error}"
+        if allow_partial and prices:
+            print(f"[market_feed] {message}; continuing with {len(prices)} prices", flush=True)
+            return prices
         raise RuntimeError(message)
 
     return prices
@@ -475,7 +480,12 @@ def fetch_coinbase_prices_safe(
         api_key, private_key_pem = _load_api_creds(api_key, private_key_pem)
 
     try:
-        return fetch_coinbase_prices(symbols, api_key=api_key, private_key_pem=private_key_pem)
+        return fetch_coinbase_prices(
+            symbols,
+            api_key=api_key,
+            private_key_pem=private_key_pem,
+            allow_partial=True,
+        )
     except Exception as exc:
         msg = f"[market_feed] Coinbase fetch failed: {exc}"
         if log_fn:

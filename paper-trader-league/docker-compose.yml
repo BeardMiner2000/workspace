@@ -51,6 +51,10 @@ services:
     command: sh -c "pip install --no-cache-dir -r requirements.txt && python src/main.py"
     volumes:
       - ./services/data_ingest:/app
+    environment:
+      DEFAULT_SEASON_ID: "season-004"
+      AUTO_BOOTSTRAP_SEASON: "true"
+      DEFAULT_STARTING_BTC: "0.05"
 
   trade_engine:
     <<: *python-service
@@ -94,7 +98,7 @@ services:
   bot_executor:
     <<: *python-service
     container_name: ptl-bot-executor
-    command: sh -c "pip install --no-cache-dir -r requirements.txt && python src/main.py"
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && python ${BOT_EXECUTOR_ENTRYPOINT:-src/main.py}"
     volumes:
       - ./services/bot_executor:/app
       - ./bots/bot_strategies.json:/app/src/bot_strategies.json

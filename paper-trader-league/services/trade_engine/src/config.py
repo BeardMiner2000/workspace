@@ -2,10 +2,6 @@ from decimal import Decimal
 import os
 
 DEFAULT_BOTS = [
-    ('solstice_drift', 'Solstice Drift'),
-    ('obsidian_flux', 'Obsidian Flux'),
-    ('vega_pulse', 'Vega Pulse'),
-    ('phantom_lattice', 'Phantom Lattice'),
     ('loser_reversal_hunter', 'Loser Reversal Hunter'),
     ('gainer_momentum_catcher', 'Gainer Momentum Catcher'),
 ]

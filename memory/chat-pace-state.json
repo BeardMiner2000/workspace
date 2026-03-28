@@ -16,14 +16,20 @@
   },
   "current": {
     "pace": "low",
-    "threadStartedAt": "2026-03-26T16:50:44.236416+00:00",
-    "lastCodifiedAt": "2026-03-26T16:50:44.236550+00:00",
-    "lastProject": "chat memory system",
+    "threadStartedAt": "2026-03-28T16:57:58.878123+00:00",
+    "lastCodifiedAt": "2026-03-28T16:57:58.878243+00:00",
+    "lastProject": null,
     "projectSwitches": 0,
     "toolSignals": 0,
     "longMessages": 0,
     "decisionSignals": 0,
     "recoverySignals": 0,
     "notes": "Heuristic state for chat rotation and codification cadence."
-  }
+  },
+  "threadStartedAt": "2026-03-28T13:43:51.946824+00:00",
+  "lastCodifiedAt": "2026-03-28T13:43:51.946824+00:00",
+  "toolSignals": 12,
+  "decisionSignals": 8,
+  "recoverySignals": 6,
+  "pace": "heavy"
 }

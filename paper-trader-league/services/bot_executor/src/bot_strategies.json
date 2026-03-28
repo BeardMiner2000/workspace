@@ -10,14 +10,14 @@
         "rsi_threshold": 30
       },
       "position_management": {
-        "max_concurrent": 3,
-        "position_size_pct": 20,
-        "take_profit_low": 0.30,
-        "take_profit_high": 0.50,
-        "hard_stop": -0.50,
-        "time_stop_hours": 4
+        "max_concurrent": 2,
+        "position_size_pct": 75,
+        "take_profit_low": 0.25,
+        "take_profit_high": 0.75,
+        "hard_stop": -0.55,
+        "time_stop_hours": 6
       },
-      "risk_tolerance": 0.50,
+      "risk_tolerance": 0.75,
       "aggressive": true
     },
     "gainer_momentum_catcher": {
@@ -32,15 +32,15 @@
         "volume_usd_min": 50000000
       },
       "position_management": {
-        "max_concurrent": 4,
-        "position_size_pct": 20,
-        "take_profit_low": 0.40,
-        "take_profit_high": 0.60,
-        "hard_stop": -0.50,
-        "time_stop_hours": 3,
+        "max_concurrent": 2,
+        "position_size_pct": 75,
+        "take_profit_low": 0.30,
+        "take_profit_high": 1.00,
+        "hard_stop": -0.55,
+        "time_stop_hours": 4,
         "exhaustion_rsi": 85
       },
-      "risk_tolerance": 0.50,
+      "risk_tolerance": 0.75,
       "aggressive": true
     },
     "aurora_quanta": {

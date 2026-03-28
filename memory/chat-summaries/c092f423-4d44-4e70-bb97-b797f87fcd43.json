@@ -1,0 +1,32 @@
+{
+  "session_id": "c092f423-4d44-4e70-bb97-b797f87fcd43",
+  "path": "/Users/jl/.openclaw/agents/main/sessions/c092f423-4d44-4e70-bb97-b797f87fcd43.jsonl",
+  "first_ts": "2026-03-27T23:56:36.182000+00:00",
+  "last_ts": "2026-03-27T23:56:36.182000+00:00",
+  "message_count": 1,
+  "user_messages": 1,
+  "assistant_messages": 0,
+  "tags": [
+    "paper-trader",
+    "openclaw-setup",
+    "openclaw-control-ui",
+    "sender",
+    "untrusted",
+    "metadata",
+    "json",
+    "label"
+  ],
+  "summary": "Sender (untrusted metadata): ```json { \"label\": \"openclaw-control-ui\", \"id\": \"openclaw-control-ui\" } ``` [Fri 2026-03-27 16:56 PDT] hows the trading dashboard and bots looking? eve",
+  "highlights": [
+    {
+      "timestamp": "2026-03-27T23:56:36.182Z",
+      "role": "user",
+      "text": "Sender (untrusted metadata): ```json { \"label\": \"openclaw-control-ui\", \"id\": \"openclaw-control-ui\" } ``` [Fri 2026-03-27 16:56 PDT] hows the trading dashboard and bots looking? everythiung working? do you hve enough context for that?"
+    },
+    {
+      "timestamp": "2026-03-27T23:56:36.182Z",
+      "role": "user",
+      "text": "Sender (untrusted metadata): ```json { \"label\": \"openclaw-control-ui\", \"id\": \"openclaw-control-ui\" } ``` [Fri 2026-03-27 16:56 PDT] hows the trading dashboard and bots looking? everythiung working? do you hve enough context for that?"
+    }
+  ]
+}

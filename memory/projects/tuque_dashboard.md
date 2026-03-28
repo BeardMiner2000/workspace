@@ -1,4 +1,4 @@
-# Project Memory — tuque_dashboard
+# Project Memory - tuque_dashboard
 
 Sessions: e086dc1e-26e2-420e-a004-b76eaa553869
 Tags: blocked, cron, paper-trading, performance-review, risk-analysis, trading

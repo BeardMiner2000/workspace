@@ -1,4 +1,4 @@
-# Project Memory — OpenClaw workspace
+# Project Memory - OpenClaw workspace
 
 Sessions: bafb85d8-3393-4e67-b28a-7b361e15ed7a
 Tags: automation, chat-index, cron, heartbeat, memory, project-context, session-history, summarization

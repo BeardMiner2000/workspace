@@ -4,7 +4,7 @@
 import asyncio
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -35,8 +35,10 @@ PAST_PRICE_MAX_AGE_MULTIPLIER = 2
 MIN_ORDER_NOTIONAL_USDT = Decimal("40")
 MIN_POSITION_NOTIONAL_USDT = Decimal("30")
 DUST_EXIT_NOTIONAL_USDT = Decimal("10")
+FORCE_EXIT_NOTIONAL_USDT = Decimal("5")
 BOT_COOLDOWN_SECONDS = 180
 SYMBOL_COOLDOWN_SECONDS = 900
+MAX_REPEAT_BUY_NOTIONAL_USDT = Decimal("5")
 EXCLUDED_BASE_ASSETS = {
     "USDT", "USDC", "USD", "USD1", "USDS", "USDP", "USDX", "USDT0", "USDM",
     "USDB", "USDD", "USDE", "GUSD", "DAI", "FDUSD", "PAX", "PYUSD", "WBTC",
@@ -60,6 +62,18 @@ def get_db():
         database=DB_NAME,
         cursor_factory=RealDictCursor,
     )
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def ensure_aware_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _base_asset(symbol: str) -> str:
@@ -106,9 +120,34 @@ def _fetch_coinbase_big_movers(table_name: str, order: str) -> list[dict]:
             ]
 
 
+def _resolve_mover_marks_season(cur) -> str:
+    lookback_interval = f"{LOOKBACK_WINDOWS_HOURS[-1]} hours"
+    cur.execute(
+        """
+        WITH season_stats AS (
+            SELECT season_id, MAX(ts) AS latest_ts, MIN(ts) AS earliest_ts
+            FROM market_marks
+            GROUP BY season_id
+        )
+        SELECT season_id
+        FROM season_stats
+        WHERE latest_ts >= now() - %s::interval
+          AND earliest_ts <= now() - %s::interval
+        ORDER BY CASE WHEN season_id = %s THEN 0 ELSE 1 END, latest_ts DESC
+        LIMIT 1
+        """,
+        (f"{LATEST_MAX_AGE_MINUTES} minutes", lookback_interval, SEASON_ID),
+    )
+    row = cur.fetchone()
+    if row and row.get("season_id"):
+        return row["season_id"]
+    return SEASON_ID
+
+
 def _rank_big_movers_from_marks(order: str) -> list[dict]:
     with get_db() as conn:
         with conn.cursor() as cur:
+            market_season_id = _resolve_mover_marks_season(cur)
             for hours in LOOKBACK_WINDOWS_HOURS:
                 lookback_interval = f"{hours} hours"
                 latest_max_age = f"{LATEST_MAX_AGE_MINUTES} minutes"
@@ -141,7 +180,7 @@ def _rank_big_movers_from_marks(order: str) -> list[dict]:
                 """).format(order=sql.SQL(order))
                 cur.execute(
                     query,
-                    (SEASON_ID, SEASON_ID, lookback_interval, latest_max_age, past_max_age, MAX_MOVERS * 4),
+                    (market_season_id, market_season_id, lookback_interval, latest_max_age, past_max_age, MAX_MOVERS * 4),
                 )
                 rows = cur.fetchall()
                 if not rows:
@@ -153,6 +192,7 @@ def _rank_big_movers_from_marks(order: str) -> list[dict]:
                     row_dict = dict(row)
                     row_dict["change_24h_pct"] = row_dict.pop("change_pct")
                     row_dict["window_hours"] = hours
+                    row_dict["market_season_id"] = market_season_id
                     filtered.append(row_dict)
                 filtered.sort(key=lambda item: item["change_24h_pct"], reverse=(order == "DESC"))
                 if len(filtered) >= MIN_MOVERS_FOR_WINDOW or hours == LOOKBACK_WINDOWS_HOURS[-1]:
@@ -218,9 +258,9 @@ def min_order_qty(price: Decimal) -> Decimal:
     if price <= 0:
         return Decimal("0.0001")
     if price >= Decimal("1000"):
-        return Decimal("0.001")
+        return Decimal("0.0001")
     if price >= Decimal("100"):
-        return Decimal("0.01")
+        return Decimal("0.001")
     return Decimal("0.0001")
 
 
@@ -238,7 +278,7 @@ def build_positions(bot_id: str, balances: dict[str, dict[str, Decimal]], marks:
         notional = qty * price
         fill = last_fill.get(symbol)
         entry_price = Decimal(str(fill["price"])) if fill and fill["side"] == "BUY" else price
-        entry_ts = fill["ts"] if fill and fill["side"] == "BUY" else None
+        entry_ts = ensure_aware_utc(fill["ts"]) if fill and fill["side"] == "BUY" else None
         positions.append({
             "symbol": symbol,
             "qty": qty,
@@ -250,6 +290,10 @@ def build_positions(bot_id: str, balances: dict[str, dict[str, Decimal]], marks:
     return positions
 
 
+def get_position_map(positions: list[dict]) -> dict[str, dict]:
+    return {position["symbol"]: position for position in positions}
+
+
 class BotExecutor:
     def __init__(self, bot_id: str):
         self.bot_id = bot_id
@@ -257,9 +301,21 @@ class BotExecutor:
         self.last_funding_ts: datetime | None = None
         self.last_trade_ts: datetime | None = None
         self.symbol_cooldowns: dict[str, datetime] = {}
+        self._warned_missing_marks = False
 
     async def execute(self):
         marks = get_latest_marks()
+        if not marks:
+            if not self._warned_missing_marks:
+                print(
+                    f"[{self.bot_id}] no market marks available for {SEASON_ID}; "
+                    "funding and candidate selection are blocked",
+                    flush=True,
+                )
+                self._warned_missing_marks = True
+            await asyncio.sleep(REFRESH_INTERVAL_SECONDS)
+            return
+        self._warned_missing_marks = False
         balances = get_bot_balances()
         positions = build_positions(self.bot_id, balances, marks)
         if await self.ensure_usdt_liquidity(balances, marks):
@@ -277,7 +333,7 @@ class BotExecutor:
         usdt_balance = bot_balance.get("USDT", Decimal("0"))
         if btc_balance <= 0:
             return False
-        if self.last_funding_ts and datetime.utcnow() - self.last_funding_ts < timedelta(seconds=FUNDING_COOLDOWN_SECONDS):
+        if self.last_funding_ts and utc_now() - self.last_funding_ts < timedelta(seconds=FUNDING_COOLDOWN_SECONDS):
             return False
         btc_usdt = marks.get("BTCUSDT")
         if not btc_usdt or btc_usdt <= 0:
@@ -291,7 +347,7 @@ class BotExecutor:
             return False
         ok = await self.submit_order("BTCUSDT", "SELL", btc_to_sell, {"strategy": "funding", "note": "convert BTC to USDT"})
         if ok:
-            self.last_funding_ts = datetime.utcnow()
+            self.last_funding_ts = utc_now()
         return ok
 
     async def manage_positions(self, positions: list[dict], marks: dict[str, Decimal]) -> None:
@@ -300,18 +356,20 @@ class BotExecutor:
         for position in positions:
             symbol = position["symbol"]
             notional = position["notional"]
-            if notional < DUST_EXIT_NOTIONAL_USDT:
+            if notional < FORCE_EXIT_NOTIONAL_USDT:
                 continue
             entry_price = position["entry_price"]
             current_price = marks.get(symbol, position["price"])
             pnl = (current_price - entry_price) / entry_price if entry_price > 0 else Decimal("0")
             age_hours = 0.0
             if position["entry_ts"]:
-                age_hours = (datetime.utcnow() - position["entry_ts"]).total_seconds() / 3600
+                age_hours = (utc_now() - position["entry_ts"]).total_seconds() / 3600
             feed_row = mover_feed.get(symbol)
             change = Decimal(str(feed_row["change_24h_pct"])) if feed_row else Decimal("0")
             exit_reason = None
-            if pnl >= Decimal(str(config["take_profit_low"])):
+            if notional < DUST_EXIT_NOTIONAL_USDT:
+                exit_reason = "dust_cleanup"
+            elif pnl >= Decimal(str(config["take_profit_low"])):
                 exit_reason = "take_profit"
             elif pnl <= Decimal(str(config["hard_stop"])):
                 exit_reason = "hard_stop"
@@ -330,10 +388,11 @@ class BotExecutor:
 
     async def open_new_position(self, balances: dict[str, Decimal], positions: list[dict], marks: dict[str, Decimal]) -> None:
         open_symbols = {p["symbol"] for p in positions if p["notional"] >= MIN_POSITION_NOTIONAL_USDT}
+        position_map = get_position_map(positions)
         max_positions = int(self.strategy["position_management"]["max_concurrent"])
         if len(open_symbols) >= max_positions:
             return
-        if self.last_trade_ts and datetime.utcnow() - self.last_trade_ts < timedelta(seconds=BOT_COOLDOWN_SECONDS):
+        if self.last_trade_ts and utc_now() - self.last_trade_ts < timedelta(seconds=BOT_COOLDOWN_SECONDS):
             return
         available_usdt = balances.get("USDT", Decimal("0"))
         if available_usdt < MIN_ORDER_NOTIONAL_USDT:
@@ -342,8 +401,11 @@ class BotExecutor:
         candidates = []
         for mover in movers:
             symbol = mover["symbol"]
-            price = Decimal(str(mover["mark_price"]))
+            price = marks.get(symbol, Decimal(str(mover["mark_price"])))
+            existing = position_map.get(symbol)
             if symbol in open_symbols or price <= 0:
+                continue
+            if existing and existing["notional"] >= MAX_REPEAT_BUY_NOTIONAL_USDT:
                 continue
             if self._symbol_on_cooldown(symbol):
                 continue
@@ -370,7 +432,9 @@ class BotExecutor:
             available_usdt / Decimal(str(max(slots_left, 1))),
         )
         if per_trade_budget < MIN_ORDER_NOTIONAL_USDT:
-            return
+            if available_usdt < MIN_ORDER_NOTIONAL_USDT:
+                return
+            per_trade_budget = min(available_usdt, MIN_ORDER_NOTIONAL_USDT)
         qty = per_trade_budget / price
         if qty < min_order_qty(price):
             return
@@ -380,13 +444,13 @@ class BotExecutor:
             "mode": "long_only",
         })
         if ok:
-            now = datetime.utcnow()
+            now = utc_now()
             self.last_trade_ts = now
             self.symbol_cooldowns[symbol] = now
 
     def _symbol_on_cooldown(self, symbol: str) -> bool:
         last = self.symbol_cooldowns.get(symbol)
-        return bool(last and datetime.utcnow() - last < timedelta(seconds=SYMBOL_COOLDOWN_SECONDS))
+        return bool(last and utc_now() - last < timedelta(seconds=SYMBOL_COOLDOWN_SECONDS))
 
     async def submit_order(self, symbol: str, side: str, quantity: Decimal, rationale: dict) -> bool:
         quantity = Decimal(str(quantity))
@@ -406,7 +470,7 @@ class BotExecutor:
             "quantity": float(quantity),
             "rationale": rationale,
             "metadata": {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": utc_now().isoformat(),
                 "runtime": "season4_executor_v2",
             },
         }
@@ -427,12 +491,12 @@ async def run_competition():
     print(f"SEASON 4 2-BOT COMPETITION STARTED season={SEASON_ID}")
     print("=" * 70)
     executors = [BotExecutor(bot_id) for bot_id in ACTIVE_BOT_IDS]
-    start_time = datetime.utcnow()
+    start_time = utc_now()
     end_time = start_time + timedelta(hours=COMPETITION_DURATION_HOURS)
-    while datetime.utcnow() < end_time:
+    while utc_now() < end_time:
         try:
             await asyncio.gather(*(executor.execute() for executor in executors))
-            elapsed = int((datetime.utcnow() - start_time).total_seconds())
+            elapsed = int((utc_now() - start_time).total_seconds())
             if elapsed and elapsed % 60 == 0:
                 print(f"[{elapsed // 60}m] season4 executors active")
         except Exception as exc:
