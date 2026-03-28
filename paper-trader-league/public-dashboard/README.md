@@ -1,120 +1,89 @@
-# Paper Trader League - Public Dashboard
+# Paper Trader League Hosted Dashboard
 
-Clean, graphical master dashboard that aggregates all three trading seasons (Season 2, 3, 4) in real-time.
+This app is the production-safe replacement for the old Grafana redirect page.
 
-## What's Included
-
-- **Master Summary Dashboard** (`infra/grafana/dashboards/master-summary.json`)
-  - All-season equity overview
-  - Combined trading metrics
-  - Per-season bot status tables
-  - Recent orders feed
-  - Daily order volume trends
-
-- **Public Web App** (this directory)
-  - Lightweight Node/Express server
-  - Simple, responsive UI
-  - Directs to Grafana or proxies API calls
-  - Easy to deploy to Render/Cloudflare/self-hosted
-
-## Quick Start (Local)
-
-```bash
-# Install dependencies
-npm install
-
-# Start with local Grafana
-GRAFANA_URL=http://localhost:3000 npm start
-
-# Visit http://localhost:3001
-```
-
-## Deploy to Render (30 seconds)
-
-1. Push to GitHub:
-```bash
-git add public-dashboard/
-git commit -m "Add public dashboard"
-git push origin main
-```
-
-2. Go to [render.com](https://render.com)
-3. Create Web Service from your repo
-4. Set start command: `npm start`
-5. Add env vars:
-   - `GRAFANA_URL=http://localhost:3000`
-   - `GRAFANA_API_KEY=<your-api-key>`
-6. Deploy!
-
-Your dashboard will be at: `https://paper-trader-dashboard.onrender.com`
-
-## Deploy to Cloudflare Pages (1 minute)
-
-1. Connect GitHub repo to [pages.cloudflare.com](https://pages.cloudflare.com)
-2. Set build output to `public/`
-3. Deploy
-
-## Self-Host with Nginx (see HOSTING.md)
-
----
-
-## Features
-
-✅ Real-time season metrics  
-✅ Equity growth charts  
-✅ Per-bot performance tables  
-✅ Recent order feed (all seasons)  
-✅ Daily order volume trends  
-✅ Mobile responsive  
-✅ Dark theme  
-✅ Zero JavaScript bloat  
-
----
-
-## Import Master Dashboard into Grafana
-
-1. Go to Grafana: `http://localhost:3000`
-2. Click "Dashboards" → "New" → "Import"
-3. Upload `infra/grafana/dashboards/master-summary.json`
-4. Select TimescaleDB as data source
-5. Done!
-
----
+It serves a live dashboard directly from the Render URL and keeps data access on the server side.
 
 ## Architecture
 
-```
-Public Web App (Node/Express)
-        ↓
-    http://localhost:3001
-        ↓
-   Serve static HTML/CSS
-        ↓
-   User's Browser
-        ↓
-   Points to Grafana at :3000
-        ↓
-   TimescaleDB queries
+Preferred deployment path:
+
+```text
+Render web service (public-dashboard)
+  -> server-side reads from reachable Postgres using read-only credentials
+  -> returns dashboard JSON and HTML to the browser
 ```
 
----
+Fallback deployment path:
+
+```text
+Render web service (public-dashboard)
+  -> server-side fetches read-only data from scoring_api
+  -> returns dashboard JSON and HTML to the browser
+```
+
+The browser never talks to localhost, Grafana, or Postgres directly.
+
+## Features
+
+- Live season overview across all tracked seasons
+- Season switcher
+- Leaderboard table
+- Recent orders feed
+- Equity history chart
+- Server-side cache to reduce DB/API load
+- Works with either direct Postgres access or a reachable scoring API
+
+## Local Run
+
+Direct Postgres mode:
+
+```bash
+cd public-dashboard
+npm install
+POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=5432 POSTGRES_USER=paperbot POSTGRES_PASSWORD=paperbot POSTGRES_DB=paperbot npm start
+```
+
+Scoring API mode:
+
+```bash
+cd public-dashboard
+npm install
+SCORING_API_URL=http://127.0.0.1:8090 npm start
+```
+
+Open `http://127.0.0.1:3001`.
 
 ## Environment Variables
 
-| Var | Default | Notes |
-|-----|---------|-------|
-| `PORT` | 3001 | Express server port |
-| `GRAFANA_URL` | http://localhost:3000 | Grafana instance URL |
-| `GRAFANA_API_KEY` | (empty) | Optional: for API proxying |
+- `PORT`: HTTP port for the dashboard service. Default `3001`.
+- `DATABASE_URL`: Preferred Postgres connection string for Render.
+- `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`: Discrete Postgres settings if not using `DATABASE_URL`.
+- `PGSSLMODE`: Set to `require` on managed Postgres when SSL is needed. Set to `disable` locally if required.
+- `SCORING_API_URL`: Optional fallback read API URL when direct DB access is not available.
+- `SCORING_API_TOKEN`: Optional bearer token for the scoring API.
+- `CACHE_TTL_MS`: Server-side cache TTL. Default `15000`.
+- `HISTORY_LIMIT`: Number of `bot_metrics` points returned to the chart. Default `240`.
+- `ORDERS_LIMIT`: Number of recent orders to show. Default `20`.
 
----
+## Render Deployment
 
-## Customization
+Use the root [`render.yaml`](../render.yaml) blueprint or configure manually:
 
-Edit `public/index.html` to:
-- Change colors (CSS variables)
-- Add your logo
-- Adjust layout
-- Add custom sections
+- Root directory: `public-dashboard`
+- Build command: `npm install`
+- Start command: `npm start`
+- Health check path: `/health`
 
-See HOSTING.md for detailed guides.
+Set one of these data source modes:
+
+1. Direct Postgres: set `DATABASE_URL` to a reachable read-only database user.
+2. Scoring API fallback: set `SCORING_API_URL` to a reachable deployment of `services/scoring_api`.
+
+Direct Postgres is the better single-service setup.
+
+## Data Safety
+
+- Use a read-only Postgres role for the dashboard.
+- Do not expose DB credentials to the browser.
+- Do not point the app at local Grafana or `localhost` in production.

@@ -1,0 +1,343 @@
+:root {
+  --bg: #07111f;
+  --panel: rgba(8, 20, 36, 0.78);
+  --panel-strong: rgba(11, 28, 49, 0.95);
+  --line: rgba(146, 179, 221, 0.18);
+  --text: #e8f0ff;
+  --muted: #8da4c4;
+  --accent: #4dd0e1;
+  --accent-2: #ffb84d;
+  --positive: #5ef2a3;
+  --negative: #ff7c7c;
+  --shadow: 0 18px 70px rgba(0, 0, 0, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(77, 208, 225, 0.16), transparent 30%),
+    radial-gradient(circle at top right, rgba(255, 184, 77, 0.18), transparent 24%),
+    linear-gradient(160deg, #050a12 0%, #081524 48%, #0b1c30 100%);
+}
+
+.shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.hero,
+.panel,
+.metric-card {
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: 20px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(140deg, rgba(11, 25, 44, 0.95), rgba(9, 18, 31, 0.72));
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2.3rem, 5vw, 4rem);
+  line-height: 0.96;
+}
+
+h2 {
+  font-size: 1.45rem;
+}
+
+.hero-text,
+.panel-note,
+.empty,
+.table-wrap td,
+.table-wrap th,
+.season-kicker,
+.meta-chip span {
+  color: var(--muted);
+}
+
+.hero-text {
+  max-width: 46rem;
+  margin-top: 12px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.hero-meta {
+  display: grid;
+  gap: 12px;
+}
+
+.meta-chip,
+.metric-card,
+.season-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(10, 22, 37, 0.72);
+}
+
+.meta-chip {
+  padding: 16px 18px;
+}
+
+.meta-chip strong,
+.metric-value,
+.season-card strong {
+  display: block;
+  margin-top: 8px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.metric-card {
+  padding: 18px;
+}
+
+.metric-label {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.metric-value {
+  margin-top: 12px;
+  font-size: 1.45rem;
+}
+
+.metric-subtle {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.panel {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--panel);
+}
+
+.panel-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.season-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.season-tab {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.season-tab.active {
+  border-color: rgba(77, 208, 225, 0.7);
+  background: rgba(77, 208, 225, 0.12);
+}
+
+.season-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.season-card {
+  padding: 16px;
+}
+
+.season-card strong {
+  font-size: 1.1rem;
+}
+
+.chart-wrap {
+  min-height: 320px;
+}
+
+.chart-svg {
+  width: 100%;
+  height: 320px;
+  display: block;
+}
+
+.chart-label {
+  font-size: 12px;
+  fill: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.chart-grid {
+  stroke: rgba(141, 164, 196, 0.12);
+  stroke-width: 1;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid rgba(146, 179, 221, 0.12);
+  white-space: nowrap;
+}
+
+th {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bot-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bot-cell strong {
+  font-size: 0.96rem;
+}
+
+.mono,
+.pill {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.pill {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  border: 1px solid var(--line);
+}
+
+.pill.buy {
+  color: var(--positive);
+  border-color: rgba(94, 242, 163, 0.35);
+}
+
+.pill.sell,
+.pill.short {
+  color: var(--negative);
+  border-color: rgba(255, 124, 124, 0.35);
+}
+
+.pill.cover {
+  color: var(--accent-2);
+  border-color: rgba(255, 184, 77, 0.35);
+}
+
+.positive {
+  color: var(--positive);
+}
+
+.negative {
+  color: var(--negative);
+}
+
+.error-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(90, 18, 18, 0.72);
+  border: 1px solid rgba(255, 124, 124, 0.35);
+  color: #ffd1d1;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .hero,
+  .overview,
+  .season-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-header {
+    align-items: start;
+    flex-direction: column;
+  }
+}
