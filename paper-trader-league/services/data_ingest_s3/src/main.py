@@ -50,6 +50,8 @@ except ImportError:  # pragma: no cover
 
 ZERO = Decimal("0")
 SAT = Decimal("0.00000001")
+MIN_ORDER_NOTIONAL_USDT = Decimal("15")
+MIN_POSITION_NOTIONAL_USDT = Decimal("10")
 
 CORE_SYMBOL_DEFAULTS = {
     "BTCUSDT":   {"price": 65000.0,   "drift": 0.0004, "amp": 0.006},
@@ -120,6 +122,7 @@ class LeagueRuntime:
         self.bot_cooldowns: dict[str, float] = {}
         self.symbol_cooldowns: dict[str, float] = {}
         self.short_positions: dict[str, dict[str, dict[str, Any]]] = {}
+        self.latest_mark_cache: dict[str, tuple[float, Decimal]] = {}
 
         # Season-003 pump data
         self.pump_tokens: list[dict] = []
@@ -131,8 +134,7 @@ class LeagueRuntime:
         self.chaos_positions: dict[str, dict] = {}  # chaos_prophet long positions
         self.chaos_shorts: dict[str, dict] = {}     # chaos_prophet synthetic shorts
 
-        if self.source == "coinbase":
-            self._seed_initial_coinbase_prices()
+        self._initial_seed_done = False
 
     # ── infra helpers ──────────────────────────────────────────────────────
     def log(self, message: str) -> None:
@@ -151,6 +153,15 @@ class LeagueRuntime:
 
     def quant(self, value: Decimal) -> Decimal:
         return value.quantize(SAT)
+
+    def min_order_qty(self, price: Decimal) -> Decimal:
+        if price <= ZERO:
+            return Decimal("0.0001")
+        if price >= Decimal("1000"):
+            return Decimal("0.001")
+        if price >= Decimal("100"):
+            return Decimal("0.01")
+        return Decimal("0.0001")
 
     def wait_for_dependencies(self) -> None:
         while True:
@@ -461,8 +472,46 @@ class LeagueRuntime:
                 continue
             symbol = f"{asset}USDT"
             price = state.marks.get(symbol, ZERO)
+            if price <= ZERO:
+                price = self.lookup_latest_mark(symbol)
             total += qty * price
         return total
+
+    def position_notional(self, balances: dict[str, Decimal], symbol: str, marks: dict[str, Decimal]) -> Decimal:
+        qty = self.holdings_qty(balances, symbol)
+        if qty <= ZERO:
+            return ZERO
+        price = marks.get(symbol, ZERO)
+        if price <= ZERO:
+            price = self.lookup_latest_mark(symbol)
+        if price <= ZERO:
+            return ZERO
+        return qty * price
+
+    def lookup_latest_mark(self, symbol: str, ttl: float = 60.0) -> Decimal:
+        now = time.time()
+        cached = self.latest_mark_cache.get(symbol)
+        if cached and now - cached[0] < ttl:
+            return cached[1]
+        try:
+            with self.get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT mark_price
+                        FROM market_marks
+                        WHERE season_id = %s AND symbol = %s
+                        ORDER BY ts DESC
+                        LIMIT 1
+                        """,
+                        (self.season_id, symbol),
+                    )
+                    row = cur.fetchone()
+        except Exception:
+            row = None
+        price = Decimal(str(row["mark_price"])) if row and row["mark_price"] is not None else ZERO
+        self.latest_mark_cache[symbol] = (now, price)
+        return price
 
     def can_trade(self, bot_id: str, symbol: str, cooldown_seconds: float, now: float) -> bool:
         key = f"{bot_id}:{symbol}"
@@ -526,6 +575,22 @@ class LeagueRuntime:
         quantity = self.quant(quantity)
         if quantity <= ZERO:
             return
+        reference_price = self.current_marks().get(symbol, ZERO)
+        if reference_price <= ZERO:
+            reference_price = self.lookup_latest_mark(symbol)
+        min_qty = self.min_order_qty(reference_price)
+        if quantity < min_qty:
+            self.log(
+                f"skip order {bot_id} {side} {symbol}: qty={quantity} below minimum {min_qty}"
+            )
+            return
+        if reference_price > ZERO:
+            notional = quantity * reference_price
+            if notional < MIN_ORDER_NOTIONAL_USDT:
+                self.log(
+                    f"skip order {bot_id} {side} {symbol}: notional={notional:.8f} below minimum {MIN_ORDER_NOTIONAL_USDT}"
+                )
+                return
         payload = {
             "season_id": self.season_id,
             "bot_id": bot_id,
@@ -557,7 +622,7 @@ class LeagueRuntime:
         try:
             tokens = fetch_top_solana_tokens()
             self.pump_tokens = tokens
-            # Update pump_prices dict
+            self.pump_prices = {}
             for t in tokens:
                 sym = t.get("symbol", "")
                 price = t.get("price_usd", 0.0)
@@ -796,6 +861,13 @@ class LeagueRuntime:
         # Emergency exit: if portfolio < 65% of starting value
         starting_value = Decimal(str(self.starting_btc)) * state.marks.get("BTCUSDT", Decimal("65000"))
         current_value = self.estimate_portfolio_value(state)
+        non_cash_assets = [
+            asset for asset, qty in state.balances.items()
+            if asset not in {"USDT", "USDC"} and qty > ZERO
+        ]
+        if current_value <= ZERO and not non_cash_assets and self.usdt_balance(state.balances) <= ZERO:
+            self.log("[chaos_prophet] no funded balances for current season; skipping emergency exit check")
+            return
         if current_value < starting_value * Decimal("0.65"):
             self.log(f"[chaos_prophet] EMERGENCY EXIT: portfolio at {float(current_value):.2f} vs starting {float(starting_value):.2f}")
             for asset, qty in state.balances.items():
@@ -812,6 +884,9 @@ class LeagueRuntime:
             pos = self.chaos_positions[sym]
             held_qty = self.holdings_qty(state.balances, sym)
             if held_qty <= ZERO:
+                del self.chaos_positions[sym]
+                continue
+            if self.position_notional(state.balances, sym, state.marks) < MIN_POSITION_NOTIONAL_USDT:
                 del self.chaos_positions[sym]
                 continue
             price = state.marks.get(sym)
@@ -1053,37 +1128,48 @@ class LeagueRuntime:
         )
         self.wait_for_dependencies()
         self.maybe_bootstrap()
+        if self.source == "coinbase" and not self._initial_seed_done:
+            try:
+                self._seed_initial_coinbase_prices()
+            except Exception as exc:
+                self.log(f"initial Coinbase price seed failed during startup: {exc}")
+            self._initial_seed_done = True
         consecutive_failures = 0
         while True:
-            # Refresh pump tokens every ~60s
-            self.refresh_pump_tokens()
+            try:
+                # Refresh pump tokens every ~60s
+                self.refresh_pump_tokens()
 
-            if self.source == "coinbase":
-                marks = self.fetch_live_marks()
-                if marks is None:
-                    consecutive_failures += 1
-                    self.log(f"live feed failure #{consecutive_failures}; skipping tick")
-                    time.sleep(min(self.loop_seconds * consecutive_failures, 30))
-                    continue
-                consecutive_failures = 0
-            else:
-                marks = self.update_synthetic_market()
+                if self.source == "coinbase":
+                    marks = self.fetch_live_marks()
+                    if marks is None:
+                        consecutive_failures += 1
+                        self.log(f"live feed failure #{consecutive_failures}; skipping tick")
+                        time.sleep(min(self.loop_seconds * consecutive_failures, 30))
+                        continue
+                    consecutive_failures = 0
+                else:
+                    marks = self.update_synthetic_market()
 
-            # Merge pump prices into marks for publishing
-            full_marks = dict(marks)
-            for sym, price in self.pump_prices.items():
-                if price > 0:
-                    full_marks[sym] = price
+                # Merge pump prices into marks for publishing
+                full_marks = dict(marks)
+                for sym, price in self.pump_prices.items():
+                    if price > 0:
+                        full_marks[sym] = price
 
-            result = self.publish_marks(full_marks)
-            self.run_bots()
-            self.log(
-                "published marks "
-                + json.dumps({k: round(v, 8) for k, v in list(marks.items())[:4]})
-                + f" (+{len(self.pump_prices)} pump tokens)"
-                + (" source=coinbase" if self.source == "coinbase" else " synthetic")
-            )
-            time.sleep(self.loop_seconds)
+                self.publish_marks(full_marks)
+                self.run_bots()
+                self.log(
+                    "published marks "
+                    + json.dumps({k: round(v, 8) for k, v in list(marks.items())[:4]})
+                    + f" (+{len(self.pump_prices)} pump tokens)"
+                    + (" source=coinbase" if self.source == "coinbase" else " synthetic")
+                )
+                time.sleep(self.loop_seconds)
+            except Exception as exc:
+                consecutive_failures += 1
+                self.log(f"main loop failure #{consecutive_failures}: {exc}")
+                time.sleep(min(self.loop_seconds * consecutive_failures, 30))
 
 
 def split_symbol(symbol: str) -> tuple[str, str]:

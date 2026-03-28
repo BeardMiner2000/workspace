@@ -12,7 +12,11 @@ import urllib.request
 from typing import Any
 
 _BOOST_URL = "https://api.dexscreener.com/token-boosts/top/v1"
-_FALLBACK_URL = "https://api.dexscreener.com/latest/dex/search/pairs/solana?q=pump"
+_LATEST_BOOST_URL = "https://api.dexscreener.com/token-boosts/latest/v1"
+_SEARCH_URLS = (
+    "https://api.dexscreener.com/latest/dex/search?q=solana%20pump",
+    "https://api.dexscreener.com/latest/dex/search?q=pump",
+)
 
 _HEADERS = {
     "User-Agent": "paper-trader-league/1.0",
@@ -152,20 +156,24 @@ def fetch_top_solana_tokens(force: bool = False) -> list[dict[str, Any]]:
 
     tokens: list[dict[str, Any]] = []
 
-    # Prefer pairs search so we get actual price data
-    try:
-        data = _get_json(_FALLBACK_URL)
-        tokens = _parse_pairs_response(data)
-    except Exception:
-        pass
-
-    # Fallback: boosted tokens (may lack price information)
-    if not tokens:
+    for url in _SEARCH_URLS:
         try:
-            data = _get_json(_BOOST_URL)
-            tokens = _parse_boost_response(data)
+            data = _get_json(url)
+            tokens = _parse_pairs_response(data)
         except Exception:
-            pass
+            tokens = []
+        if tokens:
+            break
+
+    if not tokens:
+        for url in (_LATEST_BOOST_URL, _BOOST_URL):
+            try:
+                data = _get_json(url)
+                tokens = _parse_boost_response(data)
+            except Exception:
+                tokens = []
+            if tokens:
+                break
 
     # If still nothing, return cached data or empty
     if not tokens:

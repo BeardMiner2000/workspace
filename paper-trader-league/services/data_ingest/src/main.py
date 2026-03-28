@@ -41,6 +41,9 @@ except ImportError:  # pragma: no cover
 
 ZERO = Decimal("0")
 SAT = Decimal("0.00000001")
+MIN_ORDER_NOTIONAL_USDT = Decimal("15")
+MIN_POSITION_NOTIONAL_USDT = Decimal("10")
+MIN_DUST_CLEANUP_NOTIONAL_USDT = Decimal("2")
 
 
 CORE_SYMBOL_DEFAULTS = {
@@ -143,6 +146,15 @@ class LeagueRuntime:
 
     def quant(self, value: Decimal) -> Decimal:
         return value.quantize(SAT)
+
+    def min_order_qty(self, price: Decimal) -> Decimal:
+        if price <= ZERO:
+            return Decimal("0.0001")
+        if price >= Decimal("1000"):
+            return Decimal("0.001")
+        if price >= Decimal("100"):
+            return Decimal("0.01")
+        return Decimal("0.0001")
 
     def wait_for_dependencies(self) -> None:
         while True:
@@ -415,8 +427,8 @@ class LeagueRuntime:
         return deviation, trend_pct_hr
 
     def ratio_zscore(self, alt_symbol: str, lookback: int = 120) -> tuple[float, float, float] | None:
-        btc_hist = self.history.get("BTCUSDT", [])
-        alt_hist = self.history.get(alt_symbol, [])
+        btc_hist = list(self.history.get("BTCUSDT", []))
+        alt_hist = list(self.history.get(alt_symbol, []))
         if len(btc_hist) < lookback or len(alt_hist) < lookback:
             return None
         btc_vals = [float(x) for x in btc_hist[-lookback:]]
@@ -453,6 +465,19 @@ class LeagueRuntime:
             price = state.marks.get(symbol, ZERO)
             total += qty * price
         return total
+
+    def position_notional(self, balances: dict[str, Decimal], symbol: str, marks: dict[str, Decimal]) -> Decimal:
+        qty = self.holdings_qty(balances, symbol)
+        if qty <= ZERO:
+            return ZERO
+        price = marks.get(symbol, ZERO)
+        if price <= ZERO:
+            return ZERO
+        return qty * price
+
+    def is_dust_position(self, balances: dict[str, Decimal], symbol: str, marks: dict[str, Decimal]) -> bool:
+        notional = self.position_notional(balances, symbol, marks)
+        return ZERO < notional < MIN_POSITION_NOTIONAL_USDT
 
     def can_trade(self, bot_id: str, symbol: str, cooldown_seconds: float, now: float) -> bool:
         key = f"{bot_id}:{symbol}"
@@ -516,6 +541,20 @@ class LeagueRuntime:
         quantity = self.quant(quantity)
         if quantity <= ZERO:
             return
+        reference_price = self.current_marks().get(symbol, ZERO)
+        min_qty = self.min_order_qty(reference_price)
+        if quantity < min_qty:
+            self.log(
+                f"skip order {bot_id} {side} {symbol}: qty={quantity} below minimum {min_qty}"
+            )
+            return
+        if reference_price > ZERO:
+            notional = quantity * reference_price
+            if notional < MIN_ORDER_NOTIONAL_USDT:
+                self.log(
+                    f"skip order {bot_id} {side} {symbol}: notional={notional:.8f} below minimum {MIN_ORDER_NOTIONAL_USDT}"
+                )
+                return
         payload = {
             "season_id": self.season_id,
             "bot_id": bot_id,
@@ -609,6 +648,9 @@ class LeagueRuntime:
             return
 
         if held_qty > ZERO:
+            if self.is_dust_position(state.balances, symbol, state.marks):
+                self.clear_position(state.bot_id, symbol)
+                return
             entry = position or {
                 "entry_price": float(price),
                 "entry_time": now,
@@ -721,6 +763,9 @@ class LeagueRuntime:
                 self.mark_trade(state.bot_id, symbol, now)
                 return
             if held_qty > ZERO and (obi < -0.15 or vcm < -0.001):
+                if position_value < MIN_DUST_CLEANUP_NOTIONAL_USDT:
+                    self.clear_position(state.bot_id, symbol)
+                    continue
                 self.place_order(
                     state.bot_id,
                     symbol,
@@ -841,6 +886,10 @@ class LeagueRuntime:
                 continue
             held_qty = self.holdings_qty(state.balances, symbol)
             if held_qty <= ZERO:
+                self.clear_position(state.bot_id, symbol)
+                continue
+            notional = held_qty * state.marks.get(symbol, ZERO)
+            if notional < MIN_DUST_CLEANUP_NOTIONAL_USDT:
                 self.clear_position(state.bot_id, symbol)
                 continue
             price = state.marks[symbol]
@@ -1034,24 +1083,29 @@ class LeagueRuntime:
         self.maybe_bootstrap()
         consecutive_failures = 0
         while True:
-            if self.source == "coinbase":
-                marks = self.fetch_live_marks()
-                if marks is None:
-                    consecutive_failures += 1
-                    self.log(f"live feed failure #{consecutive_failures}; skipping tick")
-                    time.sleep(min(self.loop_seconds * consecutive_failures, 30))
-                    continue
-                consecutive_failures = 0
-            else:
-                marks = self.update_synthetic_market()
-            result = self.publish_marks(marks)
-            self.run_bots()
-            self.log(
-                "published marks "
-                + json.dumps(result["marks"])
-                + (" source=coinbase" if self.source == "coinbase" else " synthetic")
-            )
-            time.sleep(self.loop_seconds)
+            try:
+                if self.source == "coinbase":
+                    marks = self.fetch_live_marks()
+                    if marks is None:
+                        consecutive_failures += 1
+                        self.log(f"live feed failure #{consecutive_failures}; skipping tick")
+                        time.sleep(min(self.loop_seconds * consecutive_failures, 30))
+                        continue
+                    consecutive_failures = 0
+                else:
+                    marks = self.update_synthetic_market()
+                result = self.publish_marks(marks)
+                self.run_bots()
+                self.log(
+                    "published marks "
+                    + json.dumps(result["marks"])
+                    + (" source=coinbase" if self.source == "coinbase" else " synthetic")
+                )
+                time.sleep(self.loop_seconds)
+            except Exception as exc:
+                consecutive_failures += 1
+                self.log(f"main loop failure #{consecutive_failures}: {exc}")
+                time.sleep(min(self.loop_seconds * consecutive_failures, 30))
 
 
 def split_symbol(symbol: str) -> tuple[str, str]:

@@ -87,7 +87,7 @@ services:
     volumes:
       - ./services/data_ingest_s3:/app
     environment:
-      DEFAULT_SEASON_ID: "season-004"
+      DEFAULT_SEASON_ID: "season-003"
       AUTO_BOOTSTRAP_SEASON: "true"
       DEFAULT_STARTING_BTC: "0.05"
 
