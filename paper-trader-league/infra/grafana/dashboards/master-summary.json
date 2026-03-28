@@ -1,0 +1,174 @@
+{
+  "dashboard": {
+    "title": "Paper Trader League - Master Summary",
+    "tags": ["paper-trader", "master", "summary"],
+    "timezone": "UTC",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {"from": "now-7d", "to": "now"},
+    "panels": [
+      {
+        "type": "stat",
+        "title": "Season 2 Active Bots",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT COUNT(DISTINCT bot_id) AS value FROM season_bots WHERE season_id = 'season-002' AND status = 'ready';"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Season 2 Total Equity (BTC)",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT SUM(equity_btc) AS value FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-002' ORDER BY bot_id, ts DESC) t;"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Season 3 Active Bots",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT COUNT(DISTINCT bot_id) AS value FROM season_bots WHERE season_id = 'season-003' AND status = 'ready';"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Season 3 Total Equity (BTC)",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT SUM(equity_btc) AS value FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-003' ORDER BY bot_id, ts DESC) t;"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Season 4 Active Bots",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 0, "y": 4, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT COUNT(DISTINCT bot_id) AS value FROM season_bots WHERE season_id = 'season-004' AND status = 'ready';"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Season 4 Total Equity (BTC)",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 6, "y": 4, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT SUM(equity_btc) AS value FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-004' ORDER BY bot_id, ts DESC) t;"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Total Orders (All Seasons)",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 12, "y": 4, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT COUNT(*) AS value FROM bot_orders WHERE status = 'filled';"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Global Realized PnL (BTC)",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 18, "y": 4, "w": 6, "h": 4},
+        "targets": [
+          {
+            "rawSql": "SELECT SUM(realized_pnl_btc) AS value FROM (SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, realized_pnl_btc FROM bot_metrics ORDER BY season_id, bot_id, ts DESC) t;"
+          }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "Equity Growth (All Seasons)",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "fieldConfig": {
+          "defaults": {
+            "custom": {"lineWidth": 2}
+          }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT ts AS time, equity_btc AS value, season_id || ' - ' || bot_id AS metric FROM bot_metrics ORDER BY ts ASC;",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "Daily Orders by Season",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "rawSql": "SELECT DATE(ts) AS time, season_id AS metric, COUNT(*) AS value FROM bot_orders GROUP BY DATE(ts), season_id ORDER BY time ASC;",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Season 2 - Latest Bot Status",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 0, "y": 16, "w": 8, "h": 8},
+        "targets": [
+          {
+            "rawSql": "SELECT b.bot_id, m.equity_btc, m.realized_pnl_btc, m.trade_count, m.drawdown_pct, m.ts FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, trade_count, drawdown_pct, ts FROM bot_metrics WHERE season_id = 'season-002' ORDER BY bot_id, ts DESC) m JOIN season_bots b ON b.bot_id = m.bot_id WHERE b.season_id = 'season-002' ORDER BY m.equity_btc DESC;"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Season 3 - Latest Bot Status",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 8, "y": 16, "w": 8, "h": 8},
+        "targets": [
+          {
+            "rawSql": "SELECT b.bot_id, m.equity_btc, m.realized_pnl_btc, m.trade_count, m.drawdown_pct, m.ts FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, trade_count, drawdown_pct, ts FROM bot_metrics WHERE season_id = 'season-003' ORDER BY bot_id, ts DESC) m JOIN season_bots b ON b.bot_id = m.bot_id WHERE b.season_id = 'season-003' ORDER BY m.equity_btc DESC;"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Season 4 - Latest Bot Status",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 16, "y": 16, "w": 8, "h": 8},
+        "targets": [
+          {
+            "rawSql": "SELECT b.bot_id, m.equity_btc, m.realized_pnl_btc, m.trade_count, m.drawdown_pct, m.ts FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, trade_count, drawdown_pct, ts FROM bot_metrics WHERE season_id = 'season-004' ORDER BY bot_id, ts DESC) m JOIN season_bots b ON b.bot_id = m.bot_id WHERE b.season_id = 'season-004' ORDER BY m.equity_btc DESC;"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Recent Orders (All Seasons)",
+        "datasource": "TimescaleDB",
+        "gridPos": {"x": 0, "y": 24, "w": 24, "h": 8},
+        "targets": [
+          {
+            "rawSql": "SELECT ts, season_id, bot_id, symbol, side, status, requested_quantity, executed_price FROM bot_orders ORDER BY ts DESC LIMIT 50;"
+          }
+        ]
+      }
+    ]
+  }
+}
