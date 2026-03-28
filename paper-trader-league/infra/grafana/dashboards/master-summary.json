@@ -1,252 +1,551 @@
 {
-  "title": "Paper Trader League - Master Summary",
-  "tags": [
-    "paper-trader",
-    "master",
-    "summary"
-  ],
-  "timezone": "UTC",
-  "schemaVersion": 39,
-  "version": 1,
-  "refresh": "30s",
-  "time": {
-    "from": "now-7d",
-    "to": "now"
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
   "panels": [
     {
-      "type": "stat",
-      "title": "Season 2 Active Bots",
-      "datasource": "TimescaleDB",
       "gridPos": {
+        "h": 4,
+        "w": 9,
         "x": 0,
-        "y": 0,
-        "w": 6,
-        "h": 4
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "content": "# Master Prix\nActive bots from seasons 2-4 are ranked by current percent gain from their opening equity. Cars not actively running are marked `DNF` and pushed to the back of the grid.",
+        "mode": "markdown"
+      },
+      "title": "Race Control",
+      "type": "text"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "background"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 9,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
       },
       "targets": [
         {
-          "rawSql": "SELECT COUNT(DISTINCT bot_id) AS value FROM season_bots WHERE season_id = 'season-002' AND status = 'ready';"
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH roster AS ( SELECT season_id, bot_id, bot_name, status FROM season_bots WHERE season_id IN ('season-002', 'season-003', 'season-004') ), first_metric AS ( SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, equity_btc AS start_equity FROM bot_metrics WHERE season_id IN ('season-002', 'season-003', 'season-004') ORDER BY season_id, bot_id, ts ASC ), latest_metric AS ( SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, equity_btc FROM bot_metrics WHERE season_id IN ('season-002', 'season-003', 'season-004') ORDER BY season_id, bot_id, ts DESC ) SELECT CONCAT(REPLACE(r.season_id, 'season-00', 'S'), ' / ', COALESCE(r.bot_name, r.bot_id)) AS value FROM roster r JOIN first_metric f USING (season_id, bot_id) JOIN latest_metric l USING (season_id, bot_id) WHERE r.status IN ('active', 'ready') ORDER BY ((l.equity_btc / NULLIF(f.start_equity, 0)) - 1) DESC, l.equity_btc DESC LIMIT 1;",
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "Pole Sitter",
+      "type": "stat"
     },
     {
-      "type": "stat",
-      "title": "Season 2 Total Equity (BTC)",
       "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "background"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "x": 6,
-        "y": 0,
-        "w": 6,
-        "h": 4
+        "h": 4,
+        "w": 5,
+        "x": 14,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
       },
       "targets": [
         {
-          "rawSql": "SELECT SUM(equity_btc) AS value FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-002' ORDER BY bot_id, ts DESC) t;"
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH roster AS ( SELECT season_id, bot_id, status FROM season_bots WHERE season_id IN ('season-002', 'season-003', 'season-004') ), first_metric AS ( SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, equity_btc AS start_equity FROM bot_metrics WHERE season_id IN ('season-002', 'season-003', 'season-004') ORDER BY season_id, bot_id, ts ASC ), latest_metric AS ( SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, equity_btc FROM bot_metrics WHERE season_id IN ('season-002', 'season-003', 'season-004') ORDER BY season_id, bot_id, ts DESC ) SELECT ROUND((((l.equity_btc / NULLIF(f.start_equity, 0)) - 1) * 100)::numeric, 4) AS value FROM roster r JOIN first_metric f USING (season_id, bot_id) JOIN latest_metric l USING (season_id, bot_id) WHERE r.status IN ('active', 'ready') ORDER BY value DESC, l.equity_btc DESC LIMIT 1;",
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "Leader Gain",
+      "type": "stat"
     },
     {
-      "type": "stat",
-      "title": "Season 3 Active Bots",
       "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "background"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 6,
-        "h": 4
+        "h": 4,
+        "w": 5,
+        "x": 19,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
       },
       "targets": [
         {
-          "rawSql": "SELECT COUNT(DISTINCT bot_id) AS value FROM season_bots WHERE season_id = 'season-003' AND status = 'ready';"
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS value FROM season_bots WHERE season_id IN ('season-002', 'season-003', 'season-004') AND status IN ('active', 'ready');",
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "Cars Running",
+      "type": "stat"
     },
     {
-      "type": "stat",
-      "title": "Season 3 Total Equity (BTC)",
       "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 18,
-        "y": 0,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT SUM(equity_btc) AS value FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-003' ORDER BY bot_id, ts DESC) t;"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Season 4 Active Bots",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 0,
-        "y": 4,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT COUNT(DISTINCT bot_id) AS value FROM season_bots WHERE season_id = 'season-004' AND status = 'ready';"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Season 4 Total Equity (BTC)",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 6,
-        "y": 4,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT SUM(equity_btc) AS value FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc FROM bot_metrics WHERE season_id = 'season-004' ORDER BY bot_id, ts DESC) t;"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Total Orders (All Seasons)",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 12,
-        "y": 4,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT COUNT(*) AS value FROM bot_orders WHERE status = 'filled';"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Global Realized PnL (BTC)",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 18,
-        "y": 4,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT SUM(realized_pnl_btc) AS value FROM (SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, realized_pnl_btc FROM bot_metrics ORDER BY season_id, bot_id, ts DESC) t;"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Equity Growth (All Seasons)",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 0,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "lineWidth": 2
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "position"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 78
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "race_status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "DNF": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "DNF"
+                      },
+                      "RUNNING": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "RUNNING"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pct_gain"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 2
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "equity_btc"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 5
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "realized_pnl_btc"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 5
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "drawdown_pct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          }
+        ]
       },
-      "targets": [
-        {
-          "rawSql": "SELECT ts AS time, equity_btc AS value, season_id || ' - ' || bot_id AS metric FROM bot_metrics ORDER BY ts ASC;",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Daily Orders by Season",
-      "datasource": "TimescaleDB",
       "gridPos": {
-        "x": 12,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT DATE(ts) AS time, season_id AS metric, COUNT(*) AS value FROM bot_orders GROUP BY DATE(ts), season_id ORDER BY time ASC;",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "title": "Season 2 - Latest Bot Status",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 0,
-        "y": 16,
-        "w": 8,
-        "h": 8
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT b.bot_id, m.equity_btc, m.realized_pnl_btc, m.trade_count, m.drawdown_pct, m.ts FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, trade_count, drawdown_pct, ts FROM bot_metrics WHERE season_id = 'season-002' ORDER BY bot_id, ts DESC) m JOIN season_bots b ON b.bot_id = m.bot_id WHERE b.season_id = 'season-002' ORDER BY m.equity_btc DESC;"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "title": "Season 3 - Latest Bot Status",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 8,
-        "y": 16,
-        "w": 8,
-        "h": 8
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT b.bot_id, m.equity_btc, m.realized_pnl_btc, m.trade_count, m.drawdown_pct, m.ts FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, trade_count, drawdown_pct, ts FROM bot_metrics WHERE season_id = 'season-003' ORDER BY bot_id, ts DESC) m JOIN season_bots b ON b.bot_id = m.bot_id WHERE b.season_id = 'season-003' ORDER BY m.equity_btc DESC;"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "title": "Season 4 - Latest Bot Status",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 16,
-        "y": 16,
-        "w": 8,
-        "h": 8
-      },
-      "targets": [
-        {
-          "rawSql": "SELECT b.bot_id, m.equity_btc, m.realized_pnl_btc, m.trade_count, m.drawdown_pct, m.ts FROM (SELECT DISTINCT ON (bot_id) bot_id, equity_btc, realized_pnl_btc, trade_count, drawdown_pct, ts FROM bot_metrics WHERE season_id = 'season-004' ORDER BY bot_id, ts DESC) m JOIN season_bots b ON b.bot_id = m.bot_id WHERE b.season_id = 'season-004' ORDER BY m.equity_btc DESC;"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "title": "Recent Orders (All Seasons)",
-      "datasource": "TimescaleDB",
-      "gridPos": {
-        "x": 0,
-        "y": 24,
+        "h": 9,
         "w": 24,
-        "h": 8
+        "x": 0,
+        "y": 4
+      },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
       },
       "targets": [
         {
-          "rawSql": "SELECT ts, season_id, bot_id, symbol, side, status, requested_quantity, executed_price FROM bot_orders ORDER BY ts DESC LIMIT 50;"
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH roster AS ( SELECT season_id, bot_id, bot_name, status FROM season_bots WHERE season_id IN ('season-002', 'season-003', 'season-004') ), first_metric AS ( SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, equity_btc AS start_equity FROM bot_metrics WHERE season_id IN ('season-002', 'season-003', 'season-004') ORDER BY season_id, bot_id, ts ASC ), latest_metric AS ( SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, equity_btc, realized_pnl_btc, drawdown_pct, trade_count, ts FROM bot_metrics WHERE season_id IN ('season-002', 'season-003', 'season-004') ORDER BY season_id, bot_id, ts DESC ), scored AS ( SELECT r.season_id AS season, COALESCE(r.bot_name, r.bot_id) AS driver, r.bot_id, CASE WHEN r.status IN ('active', 'ready') THEN 'RUNNING' ELSE 'DNF' END AS race_status, ROUND((((l.equity_btc / NULLIF(f.start_equity, 0)) - 1) * 100)::numeric, 4) AS pct_gain, l.equity_btc, l.realized_pnl_btc, l.trade_count, l.drawdown_pct, l.ts AS last_seen FROM roster r LEFT JOIN first_metric f USING (season_id, bot_id) LEFT JOIN latest_metric l USING (season_id, bot_id) ) SELECT CASE WHEN race_status = 'RUNNING' THEN ROW_NUMBER() OVER (ORDER BY CASE WHEN race_status = 'RUNNING' THEN 0 ELSE 1 END, pct_gain DESC NULLS LAST, equity_btc DESC NULLS LAST) END AS position, season, driver, bot_id, race_status, pct_gain, equity_btc, realized_pnl_btc, trade_count, drawdown_pct, last_seen FROM scored ORDER BY CASE WHEN race_status = 'RUNNING' THEN 0 ELSE 1 END, pct_gain DESC NULLS LAST, equity_btc DESC NULLS LAST, season ASC, driver ASC;",
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "Grid Classification",
+      "type": "table"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "% gain from opening equity",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 3,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH active_roster AS ( SELECT season_id, bot_id, bot_name FROM season_bots WHERE season_id IN ('season-002', 'season-003', 'season-004') AND status IN ('active', 'ready') ), first_metric AS ( SELECT DISTINCT ON (season_id, bot_id) season_id, bot_id, equity_btc AS start_equity FROM bot_metrics WHERE season_id IN ('season-002', 'season-003', 'season-004') ORDER BY season_id, bot_id, ts ASC ) SELECT m.ts AS time, ROUND((((m.equity_btc / NULLIF(f.start_equity, 0)) - 1) * 100)::numeric, 4) AS value, CONCAT(REPLACE(m.season_id, 'season-00', 'S'), ' / ', COALESCE(r.bot_name, m.bot_id)) AS metric FROM bot_metrics m JOIN active_roster r USING (season_id, bot_id) JOIN first_metric f USING (season_id, bot_id) WHERE $__timeFilter(m.ts) ORDER BY m.ts ASC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Championship Pace",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "TimescaleDB",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT season_id AS season, COALESCE(bot_name, bot_id) AS driver, bot_id, 'DNF' AS status, created_at AS entered_championship FROM season_bots WHERE season_id IN ('season-002', 'season-003', 'season-004') AND status NOT IN ('active', 'ready') ORDER BY season_id ASC, driver ASC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Retirements / DNF",
+      "type": "table"
     }
   ],
-  "uid": "master-summary"
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "paper-trader",
+    "master",
+    "summary",
+    "leaderboard"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-14d",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Paper Trader League - Master Summary",
+  "uid": "master-summary",
+  "version": 2
 }
