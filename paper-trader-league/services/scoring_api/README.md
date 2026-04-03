@@ -11,3 +11,4 @@ Read-only API for Grafana, the hosted dashboard, and quick inspection.
 - `GET /history/equity?season_id=season-001&limit=240`
 - `GET /orders/latest?season_id=season-001&limit=25`
 - `GET /dashboard/summary?season_id=season-001&history_limit=240&orders_limit=20`
+- `GET /dashboard/export_s5?season_id=season-005&orders_limit=20&history_days=7`

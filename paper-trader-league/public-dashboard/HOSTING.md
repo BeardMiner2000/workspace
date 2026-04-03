@@ -26,6 +26,12 @@ SCORING_API_URL=https://your-scoring-api.example.com
 
 The dashboard will use that read-only API instead.
 
+For the static GitHub-export dashboard, the matching Season 5 export URL is:
+
+```text
+https://your-scoring-api.example.com/dashboard/export_s5?season_id=season-005&orders_limit=20&history_days=7
+```
+
 ## Render setup
 
 1. Push the repo to GitHub.
@@ -41,6 +47,18 @@ The dashboard will use that read-only API instead.
    - Preferred: `DATABASE_URL`
    - Or fallback: `SCORING_API_URL`
 6. Deploy.
+
+## Render blueprint shape
+
+The repo `render.yaml` can define both:
+
+- `paper-trader-scoring-api`
+- `paper-trader-dashboard`
+
+Use the scoring API URL for:
+
+- Render dashboard env var: `SCORING_API_URL`
+- GitHub Actions secret in `tuque-s5-dashboard`: `DASHBOARD_SOURCE_URL`
 
 ## Required external prerequisite
 
